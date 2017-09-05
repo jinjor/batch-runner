@@ -3,7 +3,7 @@ const promiseUtil = require('../src/index.js');
 
 var i = 0;
 
-function getSomething() {
+function getSomething(param) {
   return new Promise((resolve, reject) => {
     setTimeout(function() {
       i++;
@@ -13,19 +13,26 @@ function getSomething() {
         return resolve(i);
       }
     }, 100);
+  }).then(i => {
+    console.log(param, ' => ', i);
+    return i;
+  }).catch(e => {
+    console.log(param, ' => ', e.message);
+    return Promise.reject(e);
   });
 }
 
-const promises = [
-  getSomething,
-  getSomething,
-  getSomething,
-  getSomething,
-  getSomething,
-  getSomething,
-  getSomething,
-];
 
+/* All items must be type of `number => Promise[a]` */
+const promises = [
+  () => getSomething('A'),
+  () => getSomething('B'),
+  () => getSomething('C'),
+  () => getSomething('D'),
+  () => getSomething('E'),
+  () => getSomething('F'),
+  () => getSomething('G'),
+];
 
 promiseUtil.series(promises, {
   interval: 100,
