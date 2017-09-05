@@ -12,19 +12,27 @@ function repeat(length, value) {
   return arr;
 }
 
-function series(functions, options) {
-  return reduce(functions, (results, result, i) => {
+
+function batch(requests, toPromise, options) {
+  return reduce(requests, toPromise, (results, result, i) => {
     results.push(result);
     return results;
   }, [], options);
 }
 
-function reduce(functions, reducer, init, options) {
+function reduce(requests, toPromise, reducer, init, options) {
   const interval = options.interval || 0;
   const retryIntervals = createRetryIntervals(options.retry, options.interval);
-  return functions.reduce((memo, p, i) => {
-    return memo.then(results => (i && interval) ? delay(interval).then(_ => results) : results).then(results => {
-      return doWithRetry(_ => p(i).then(result => reducer(results, result, i)), retryIntervals, 0, []);
+  return requests.reduce((memo, request, i) => {
+    return memo.then(results => {
+      const wait = (i && interval) ? delay(interval) : Promise.resolve();
+      const createPromise = () => toPromise(request, i).then(result => reducer(results, result, i));
+      return wait.then(results => {
+        return doWithRetry(createPromise, retryIntervals, 0, []).catch(e => {
+          e.unprocessedRequests = requests.slice(i);
+          return Promise.reject(e);
+        });
+      });
     });
   }, Promise.resolve(init));
 }
@@ -69,6 +77,7 @@ function formatErrorMessage(e, i) {
 
 module.exports = {
   delay: delay,
-  series: series,
-  reduce: reduce,
+  batch: batch,
+  // series: series,
+  // reduce: reduce,
 };

@@ -3,7 +3,7 @@ const promiseUtil = require('../src/index.js');
 
 var i = 0;
 
-function getSomething(param) {
+function getSomething(req) {
   return new Promise((resolve, reject) => {
     setTimeout(function() {
       i++;
@@ -14,27 +14,19 @@ function getSomething(param) {
       }
     }, 100);
   }).then(i => {
-    console.log(param, ' => ', i);
+    console.log(req, ' => ', i);
     return i;
   }).catch(e => {
-    console.log(param, ' => ', e.message);
+    console.log(req, ' => ', e.message);
     return Promise.reject(e);
   });
 }
 
 
-/* All items must be type of `number => Promise[a]` */
-const promises = [
-  () => getSomething('A'),
-  () => getSomething('B'),
-  () => getSomething('C'),
-  () => getSomething('D'),
-  () => getSomething('E'),
-  () => getSomething('F'),
-  () => getSomething('G'),
-];
+const requests = ['A', 'B', 'C', 'D', 'E', 'F', 'G'];
+const toPromise = (req, i) => getSomething(req);
 
-promiseUtil.series(promises, {
+promiseUtil.batch(requests, toPromise, {
   interval: 100,
   retry: {
     count: 2,
@@ -44,4 +36,6 @@ promiseUtil.series(promises, {
   console.log(results);
 }).catch(e => {
   console.error('Error:', e.message);
+  console.error('Unprocessed:', e.unprocessedRequests);
+  process.exit(1);
 });
