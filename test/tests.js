@@ -12,7 +12,7 @@ function getSomething(req) {
       } else {
         return resolve(i);
       }
-    }, 100);
+    }, getRandomArbitary(40, 100));
   }).then(i => {
     console.log(req, ' => ', i);
     return i;
@@ -20,6 +20,10 @@ function getSomething(req) {
     console.log(req, ' => ', e.message);
     return Promise.reject(e);
   });
+}
+
+function getRandomArbitary(min, max) {
+  return Math.random() * (max - min) + min;
 }
 
 
@@ -39,3 +43,14 @@ promiseUtil.batch(requests, toPromise, {
   console.error('Unprocessed:', e.unprocessedRequests);
   process.exit(1);
 });
+
+// promiseUtil.parallel(requests, toPromise, {
+//   limit: 3
+// }).then(results => {
+//   console.log(results);
+// }).catch(e => {
+//   console.error('Error:', e.message);
+//   console.error('Errors:', e.errors.map(e => e.message));
+//   console.error('Unprocessed:', e.unprocessedRequests);
+//   process.exit(1);
+// });

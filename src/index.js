@@ -12,6 +12,75 @@ function repeat(length, value) {
   return arr;
 }
 
+function parallel(requests, toPromise, options) {
+  const results = new Array(requests.length);
+  const failures = new Array(requests.length);
+  const limit = options.limit || null;
+  const stopImmediately = options.stopImmediately || false;
+  let cursor = 0;
+  let count = 0;
+  let stop = false;
+  return new Promise((resolve, reject) => {
+    function send() {
+      // console.log('count', count);
+      if (stop) {
+        return;
+      }
+      if (limit && count >= limit) {
+        return;
+      }
+      const request = requests[cursor];
+      if (!request) {
+        return;
+      }
+
+      Promise.resolve(cursor).then(cursor => {
+        return toPromise(request).then(result => {
+          results[cursor] = result;
+          failures[cursor] = null; // successful flag
+        }).catch(e => {
+          failures[cursor] = e;
+          if (!stopImmediately) {
+            stop = true;
+          }
+        }).then(_ => {
+          count--;
+          if (count === 0) {
+            response(resolve, reject, requests, failures);
+          } else {
+            send();
+          }
+        });
+      });
+      cursor++;
+      count++;
+      send();
+    }
+    send();
+  });
+}
+
+function response(resolve, reject, requests, failures) {
+  const errors = [];
+  const unprocessed = [];
+  for (let i = 0; i < requests.length; i++) {
+    const failure = failures[i];
+    if (failure) {
+      errors.push(failure);
+    }
+    if (failure !== null) {
+      unprocessed.push(requests[i]);
+    }
+  }
+  if (unprocessed.length > 0) {
+    const err = new Error('Some requests are unprocessed.');
+    err.errors = errors;
+    err.unprocessedRequests = unprocessed;
+    reject(err);
+  } else {
+    resolve(results);
+  }
+}
 
 function batch(requests, toPromise, options) {
   return reduce(requests, toPromise, (results, result, i) => {
@@ -78,6 +147,5 @@ function formatErrorMessage(e, i) {
 module.exports = {
   delay: delay,
   batch: batch,
-  // series: series,
-  // reduce: reduce,
+  parallel: parallel
 };
