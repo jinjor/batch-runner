@@ -2,5 +2,11 @@
   "name": "promise-util",
   "version": "1.0.0",
   "main": "index.js",
-  "license": "MIT"
+  "license": "MIT",
+  "scripts": {
+    "test": "mocha test/tests.js"
+  },
+  "devDependencies": {
+    "mocha": "^3.5.0"
+  }
 }

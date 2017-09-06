@@ -1,6 +1,5 @@
 const promiseUtil = require('../src/index.js');
 
-
 var i = 0;
 
 function getSomething(req) {
@@ -26,31 +25,38 @@ function getRandomArbitary(min, max) {
   return Math.random() * (max - min) + min;
 }
 
-
 const requests = ['A', 'B', 'C', 'D', 'E', 'F', 'G'];
 const toPromise = (req, i) => getSomething(req);
 
-promiseUtil.batch(requests, toPromise, {
-  interval: 100,
-  retry: {
-    count: 2,
-    interval: 1000
-  }
-}).then(results => {
-  console.log(results);
-}).catch(e => {
-  console.error('Error:', e.message);
-  console.error('Unprocessed:', e.unprocessedRequests);
-  process.exit(1);
+describe('promise-util', function() {
+  this.timeout(1000 * 30);
+  describe('#batch()', function() {
+    it('should work', function() {
+      return promiseUtil.batch(requests, toPromise, {
+        interval: 100,
+        retry: {
+          count: 2,
+          interval: 1000
+        }
+      }).then(results => {
+        console.log(results);
+      }).catch(e => {
+        console.error('Error:', e.message);
+        console.error('Unprocessed:', e.unprocessedRequests);
+      });
+    });
+  });
+  describe('#parallel()', function() {
+    it('should work', function() {
+      return promiseUtil.parallel(requests, toPromise, {
+        limit: 3
+      }).then(results => {
+        console.log(results);
+      }).catch(e => {
+        console.error('Error:', e.message);
+        console.error('Errors:', e.errors.map(e => e.message));
+        console.error('Unprocessed:', e.unprocessedRequests);
+      });
+    });
+  });
 });
-
-// promiseUtil.parallel(requests, toPromise, {
-//   limit: 3
-// }).then(results => {
-//   console.log(results);
-// }).catch(e => {
-//   console.error('Error:', e.message);
-//   console.error('Errors:', e.errors.map(e => e.message));
-//   console.error('Unprocessed:', e.unprocessedRequests);
-//   process.exit(1);
-// });
