@@ -40,3 +40,15 @@ promiseUtil.parallel(requests, toPromise, {
   console.error('Unprocessed:', e.unprocessedRequests);
 });
 ```
+
+## npm install
+
+[Alpha versions](https://github.com/jinjor/promise-util/tags) are available via GitHub.
+
+```json
+{
+  "dependencies": {
+    "promise-util": "git@github.com:jinjor/promise-util.git#0.x.x"
+  }
+}
+```
