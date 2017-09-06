@@ -40,7 +40,7 @@ function parallel(requests, toPromise, options) {
           failures[cursor] = null; // successful flag
         }).catch(e => {
           failures[cursor] = e;
-          if (!stopImmediately) {
+          if (stopImmediately) {
             stop = true;
           }
         }).then(_ => {
