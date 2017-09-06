@@ -13,46 +13,49 @@ function repeat(length, value) {
 }
 
 function parallel(requests, toPromise, options) {
+  options = options || {};
   const results = new Array(requests.length);
   const failures = new Array(requests.length);
   const limit = options.limit || null;
   const stopImmediately = options.stopImmediately || false;
-  let cursor = 0;
+  let index = 0;
   let count = 0;
   let stop = false;
   return new Promise((resolve, reject) => {
     function send() {
-      // console.log('count', count);
       if (stop) {
         return;
       }
       if (limit && count >= limit) {
         return;
       }
-      const request = requests[cursor];
+      const request = requests[index];
       if (!request) {
+        if (count === 0) {
+          response(resolve, reject, requests, results, failures);
+        }
         return;
       }
 
-      Promise.resolve(cursor).then(cursor => {
-        return toPromise(request).then(result => {
-          results[cursor] = result;
-          failures[cursor] = null; // successful flag
+      Promise.resolve(index).then(index => {
+        return toPromise(request, index).then(result => {
+          results[index] = result;
+          failures[index] = null; // successful flag
         }).catch(e => {
-          failures[cursor] = e;
+          failures[index] = e;
           if (stopImmediately) {
             stop = true;
           }
         }).then(_ => {
           count--;
           if (count === 0) {
-            response(resolve, reject, requests, failures);
+            response(resolve, reject, requests, results, failures);
           } else {
             send();
           }
         });
       });
-      cursor++;
+      index++;
       count++;
       send();
     }
@@ -60,12 +63,12 @@ function parallel(requests, toPromise, options) {
   });
 }
 
-function response(resolve, reject, requests, failures) {
+function response(resolve, reject, requests, results, failures) {
   const errors = [];
   const unprocessed = [];
   for (let i = 0; i < requests.length; i++) {
     const failure = failures[i];
-    if (failure) {
+    if (typeof failure !== 'undefined' && failure !== null) {
       errors.push(failure);
     }
     if (failure !== null) {
@@ -90,6 +93,7 @@ function batch(requests, toPromise, options) {
 }
 
 function reduce(requests, toPromise, reducer, init, options) {
+  options = options || {};
   const interval = options.interval || 0;
   const retryIntervals = createRetryIntervals(options.retry, options.interval);
   return requests.reduce((memo, request, i) => {
@@ -98,8 +102,10 @@ function reduce(requests, toPromise, reducer, init, options) {
       const createPromise = () => toPromise(request, i).then(result => reducer(results, result, i));
       return wait.then(results => {
         return doWithRetry(createPromise, retryIntervals, 0, []).catch(e => {
-          e.unprocessedRequests = requests.slice(i);
-          return Promise.reject(e);
+          const err = new Error('Some requests are unprocessed.');
+          err.errors = [e];
+          err.unprocessedRequests = requests.slice(i);
+          return Promise.reject(err);
         });
       });
     });
@@ -118,13 +124,13 @@ function createRetryIntervals(retry, interval) {
   return repeat(retryCount, retryInterval);
 }
 
-function doWithRetry(createPromise, retryIntervals, retryCursor, errors) {
+function doWithRetry(createPromise, retryIntervals, retryindex, errors) {
   return createPromise().catch(e => {
     errors.push(e);
-    const retryInterval = retryIntervals[retryCursor];
+    const retryInterval = retryIntervals[retryindex];
     if (typeof retryInterval === 'number') {
       return delay(retryInterval).then(_ => {
-        return doWithRetry(createPromise, retryIntervals, retryCursor + 1, errors);
+        return doWithRetry(createPromise, retryIntervals, retryindex + 1, errors);
       });
     }
     return Promise.reject(reduceErrors(errors));
