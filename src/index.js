@@ -13,11 +13,20 @@ function repeat(length, value) {
 }
 
 function parallel(requests, toPromise, options) {
+  const init = [];
+  const reducer = (results, result, index) => {
+    results.push(result);
+    return results;
+  }
+  return doParallel(requests, toPromise, reducer, init, options);
+}
+
+function doParallel(requests, toPromise, reducer, init, options) {
   options = options || {};
-  const results = new Array(requests.length);
   const failures = new Array(requests.length);
   const limit = options.limit || null;
   const stopImmediately = options.stopImmediately || false;
+  let results = init;
   let index = 0;
   let count = 0;
   let stop = false;
@@ -29,17 +38,16 @@ function parallel(requests, toPromise, options) {
       if (limit && count >= limit) {
         return;
       }
-      const request = requests[index];
-      if (!request) {
+      if (index >= requests.length) {
         if (count === 0) {
           response(resolve, reject, requests, results, failures);
         }
         return;
       }
-
       Promise.resolve(index).then(index => {
-        return toPromise(request, index).then(result => {
-          results[index] = result;
+        send();
+        toPromise(requests[index], index).then(result => {
+          results = reducer(results, result, index);
           failures[index] = null; // successful flag
         }).catch(e => {
           failures[index] = e;
@@ -57,7 +65,6 @@ function parallel(requests, toPromise, options) {
       });
       index++;
       count++;
-      send();
     }
     send();
   });

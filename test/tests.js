@@ -36,6 +36,9 @@ describe('promise-util', function() {
     it('should work in minimal', function() {
       return promiseUtil.batch([], () => Promise.resolve());
     });
+    it('should not cause stack-overflow', function() {
+      return promiseUtil.batch(new Array(100000), () => Promise.resolve());
+    });
     it('should return correct results', function() {
       return promiseUtil.batch([5, 6, 7], (req, index) => Promise.resolve([req, index])).then(res => {
         assert.deepEqual(res, [
@@ -43,6 +46,11 @@ describe('promise-util', function() {
           [6, 1],
           [7, 2]
         ]);
+      });
+    });
+    it('should handle falsy requests', function() {
+      return promiseUtil.batch([0, false, null], req => Promise.resolve(req)).then(res => {
+        assert.deepEqual(res, [0, false, null])
       });
     });
     it('should return correct error', function() {
@@ -75,6 +83,9 @@ describe('promise-util', function() {
     it('should handle empty requests', function() {
       return promiseUtil.parallel([], () => Promise.resolve());
     });
+    it('should not cause stack-overflow', function() {
+      return promiseUtil.parallel(new Array(100000), () => Promise.resolve());
+    });
     it('should return correct results', function() {
       return promiseUtil.parallel([5, 6, 7], (req, index) => Promise.resolve([req, index])).then(res => {
         assert.deepEqual(res, [
@@ -82,6 +93,11 @@ describe('promise-util', function() {
           [6, 1],
           [7, 2]
         ]);
+      });
+    });
+    it('should handle falsy requests', function() {
+      return promiseUtil.parallel([0, false, null], req => Promise.resolve(req)).then(res => {
+        assert.deepEqual(res, [0, false, null])
       });
     });
     it('should return correct error', function() {
