@@ -108,9 +108,7 @@ function reduce(requests, toPromise, reducer, init, options) {
       const wait = (i && interval) ? delay(interval) : Promise.resolve();
       const createPromise = () => toPromise(request, i).then(result => reducer(results, result, i));
       return wait.then(results => {
-        return doWithRetry(createPromise, retryIntervals, 0, []).catch(e => {
-          const err = new Error('Some requests are unprocessed.');
-          err.errors = [e];
+        return doWithRetry(createPromise, retryIntervals, 0, []).catch(err => {
           err.unprocessedRequests = requests.slice(i);
           return Promise.reject(err);
         });
@@ -145,11 +143,10 @@ function doWithRetry(createPromise, retryIntervals, retryindex, errors) {
 }
 
 function reduceErrors(errors) {
-  if (errors.length === 1) {
-    return errors[0];
-  }
   const errorMessage = errors.filter(e => !!e).map(formatErrorMessage).join('\t');
-  return new Error(errorMessage);
+  const e = new Error(errorMessage);
+  e.errors = errors;
+  return e;
 }
 
 function formatErrorMessage(e, i) {
