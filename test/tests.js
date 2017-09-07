@@ -95,6 +95,18 @@ describe('promise-util', function() {
         ]);
       });
     });
+    it('should return results in order', function() {
+      return promiseUtil.parallel(
+        [5, 6, 7],
+        (req, index) => promiseUtil.delay((5 - index) * 100).then(_ => [req, index])
+      ).then(res => {
+        assert.deepEqual(res, [
+          [5, 0],
+          [6, 1],
+          [7, 2]
+        ]);
+      });
+    });
     it('should handle falsy requests', function() {
       return promiseUtil.parallel([0, false, null], req => Promise.resolve(req)).then(res => {
         assert.deepEqual(res, [0, false, null])

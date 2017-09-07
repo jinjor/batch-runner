@@ -13,9 +13,9 @@ function repeat(length, value) {
 }
 
 function parallel(requests, toPromise, options) {
-  const init = [];
+  const init = new Array(requests.length);
   const reducer = (results, result, index) => {
-    results.push(result);
+    results[index] = result;
     return results;
   }
   return doParallel(requests, toPromise, reducer, init, options);
