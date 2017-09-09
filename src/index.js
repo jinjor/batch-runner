@@ -69,7 +69,7 @@ function parallel(requests, toPromise, options) {
     for (let i = 0; i < requests.length; i++) {
       const reqInfo = reqInfoList[i];
       if (reqInfo.errors.length > 0) {
-        const err = new Error(`Tried ${reqInfo.errors.length} times but could not get successful result.`);
+        const err = new Error(`Tried ${reqInfo.errors.length} times but could not get successful result. ` + formatErrorMessages(reqInfo.errors));
         err.errors = reqInfo.errors;
         errors.push(err);
         unprocessed.push(reqInfo.request);
@@ -138,16 +138,19 @@ function doWithRetry(createPromise, retryIntervals, retryindex, errors) {
 }
 
 function reduceErrors(errors) {
-  const errorMessage = errors.filter(e => !!e).map(formatErrorMessage).join('\t');
+  const errorMessage = formatErrorMessages(errors);
   const e = new Error(errorMessage);
   e.errors = errors;
   return e;
 }
 
-function formatErrorMessage(e, i) {
-  return '[' + (i + 1) + '] ' + (e.message || e.toString());
+function formatErrorMessages(errors) {
+  return errors.map(formatErrorMessage).join('\t');
 }
 
+function formatErrorMessage(e, i) {
+  return '[' + (i + 1) + '] ' + (e ? e.message || JSON.stringify(e) : '');
+}
 
 module.exports = {
   delay: delay,
