@@ -4,92 +4,87 @@ function delay(ms) {
   });
 }
 
-function repeat(length, value) {
-  const arr = new Array(length);
-  for (let i = 0; i < length; i++) {
-    arr[i] = value;
-  }
-  return arr;
-}
-
 function parallel(requests, toPromise, options) {
-  const init = new Array(requests.length);
-  const reducer = (results, result, index) => {
-    results[index] = result;
-    return results;
-  }
-  return doParallel(requests, toPromise, reducer, init, options);
-}
-
-function doParallel(requests, toPromise, reducer, init, options) {
   options = options || {};
-  const failures = new Array(requests.length);
+  const retryCount = options.retry || 0;
   const limit = options.limit || null;
   const stopImmediately = options.stopImmediately || false;
-  let results = init;
-  let index = 0;
+  const reqInfoList = requests.map((req, i) => {
+    return {
+      index: i,
+      request: req,
+      result: undefined,
+      errors: [],
+    };
+  });
+  const stack = reqInfoList.concat(); //copy
   let count = 0;
-  let stop = false;
-  return new Promise((resolve, reject) => {
-    function send() {
-      if (stop) {
+  let stopRequest = false;
+  return new Promise((resolve, _) => {
+    function loop() {
+      if (stopRequest) {
         return;
       }
       if (limit && count >= limit) {
         return;
       }
-      if (index >= requests.length) {
+      if (stack.length === 0) {
         if (count === 0) {
-          response(resolve, reject, requests, results, failures);
+          resolve();
         }
         return;
       }
-      Promise.resolve(index).then(index => {
-        send();
-        toPromise(requests[index], index).then(result => {
-          results = reducer(results, result, index);
-          failures[index] = null; // successful flag
+      const reqInfo = stack.shift();
+      Promise.resolve().then(_ => {
+        loop();
+        toPromise(reqInfo.request, reqInfo.index).then(result => {
+          reqInfo.result = result;
+          reqInfo.errors.length = 0;
         }).catch(e => {
-          failures[index] = e;
-          if (stopImmediately) {
-            stop = true;
+          reqInfo.errors.push(e);
+          if (reqInfo.errors.length <= retryCount) {
+            // console.log('retrying...');
+            stack.unshift(reqInfo);
+          } else {
+            if (stopImmediately) {
+              stopRequest = true;
+            }
           }
         }).then(_ => {
           count--;
-          if (count === 0) {
-            response(resolve, reject, requests, results, failures);
+          if (count === 0 && stack.length === 0) {
+            resolve();
           } else {
-            send();
+            loop();
           }
         });
       });
-      index++;
       count++;
     }
-    send();
+    loop();
+  }).then(_ => {
+    const results = [];
+    const errors = [];
+    const unprocessed = [];
+    for (let i = 0; i < requests.length; i++) {
+      const reqInfo = reqInfoList[i];
+      if (reqInfo.errors.length > 0) {
+        const err = new Error(`Tried ${reqInfo.errors.length} times but could not get successful result. ` + formatErrorMessages(reqInfo.errors));
+        err.errors = reqInfo.errors;
+        errors.push(err);
+        unprocessed.push(reqInfo.request);
+      } else {
+        results.push(reqInfo.result);
+      }
+    }
+    if (errors.length) {
+      const err = new Error('Some requests are unprocessed.');
+      err.errors = errors;
+      err.unprocessedRequests = unprocessed;
+      return Promise.reject(err);
+    }
+    return results;
   });
-}
-
-function response(resolve, reject, requests, results, failures) {
-  const errors = [];
-  const unprocessed = [];
-  for (let i = 0; i < requests.length; i++) {
-    const failure = failures[i];
-    if (typeof failure !== 'undefined' && failure !== null) {
-      errors.push(failure);
-    }
-    if (failure !== null) {
-      unprocessed.push(requests[i]);
-    }
-  }
-  if (unprocessed.length > 0) {
-    const err = new Error('Some requests are unprocessed.');
-    err.errors = errors;
-    err.unprocessedRequests = unprocessed;
-    reject(err);
-  } else {
-    resolve(results);
-  }
 }
 
 function batch(requests, toPromise, options) {
@@ -126,7 +121,7 @@ function createRetryIntervals(retry, interval) {
   }
   const retryCount = (typeof retry === 'number') ? retry : retry.count || 0;
   const retryInterval = retry.interval || interval || 0;
-  return repeat(retryCount, retryInterval);
+  return new Array(retryCount).fill(retryInterval);
 }
 
 function doWithRetry(createPromise, retryIntervals, retryindex, errors) {
@@ -143,16 +138,19 @@ function doWithRetry(createPromise, retryIntervals, retryindex, errors) {
 }
 
 function reduceErrors(errors) {
-  const errorMessage = errors.filter(e => !!e).map(formatErrorMessage).join('\t');
+  const errorMessage = formatErrorMessages(errors);
   const e = new Error(errorMessage);
   e.errors = errors;
   return e;
 }
 
-function formatErrorMessage(e, i) {
-  return '[' + (i + 1) + '] ' + (e.message || e.toString());
+function formatErrorMessages(errors) {
+  return errors.map(formatErrorMessage).join('\t');
 }
 
+function formatErrorMessage(e, i) {
+  return '[' + (i + 1) + '] ' + (e ? e.message || JSON.stringify(e) : '');
+}
 
 module.exports = {
   delay: delay,
