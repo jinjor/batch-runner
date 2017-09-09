@@ -95,13 +95,13 @@ function parallel2(requests, toPromise, options) {
       if (limit && count >= limit) {
         return;
       }
-      const reqInfo = stack.shift();
-      if (typeof reqInfo === 'undefined') {
+      if (stack.length === 0) {
         if (count === 0) {
           resolve();
         }
         return;
       }
+      const reqInfo = stack.shift();
       Promise.resolve().then(_ => {
         loop();
         toPromise(reqInfo.request, reqInfo.index).then(result => {
@@ -119,7 +119,7 @@ function parallel2(requests, toPromise, options) {
           }
         }).then(_ => {
           count--;
-          if (count === 0) {
+          if (count === 0 && stack.length === 0) {
             resolve();
           } else {
             loop();

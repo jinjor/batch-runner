@@ -125,7 +125,8 @@ describe('promise-util', function() {
     });
     it('should work', function() {
       return promiseUtil.parallel(requests, toPromise, {
-        limit: 3
+        limit: 1,
+        retry: 2
       }).then(results => {
         console.log(results);
       }).catch(e => {
