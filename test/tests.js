@@ -31,13 +31,9 @@ const requests = ['A', 'B', 'C', 'D', 'E', 'F', 'G'];
 const toPromise = (req, i) => getSomething(req);
 
 describe('promise-util', function() {
-  this.timeout(1000 * 30);
   describe('#batch()', function() {
     it('should work in minimal', function() {
       return promiseUtil.batch([], () => Promise.resolve());
-    });
-    it('should not cause stack-overflow', function() {
-      return promiseUtil.batch(new Array(100000), () => Promise.resolve());
     });
     it('should return correct results', function() {
       return promiseUtil.batch([5, 6, 7], (req, index) => Promise.resolve([req, index])).then(res => {
@@ -78,13 +74,14 @@ describe('promise-util', function() {
         console.error('Unprocessed:', e.unprocessedRequests);
       });
     });
+    it('should not cause stack-overflow', function() {
+      this.timeout(1000 * 30);
+      return promiseUtil.batch(new Array(100000), () => Promise.resolve());
+    });
   });
   describe('#parallel()', function() {
     it('should handle empty requests', function() {
       return promiseUtil.parallel([], () => Promise.resolve());
-    });
-    it('should not cause stack-overflow', function() {
-      return promiseUtil.parallel(new Array(100000).fill(), () => Promise.resolve());
     });
     it('should return correct results', function() {
       return promiseUtil.parallel([5, 6, 7], (req, index) => Promise.resolve([req, index])).then(res => {
@@ -145,6 +142,10 @@ describe('promise-util', function() {
         console.error('Errors:', e.errors.map(e => e.message));
         console.error('Unprocessed:', e.unprocessedRequests);
       });
+    });
+    it('should not cause stack-overflow', function() {
+      this.timeout(1000 * 30);
+      return promiseUtil.parallel(new Array(100000).fill(), () => Promise.resolve());
     });
   });
 });

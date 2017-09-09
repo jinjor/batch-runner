@@ -20,48 +20,36 @@ function parallel(requests, toPromise, options) {
   const stack = reqInfoList.concat(); //copy
   let count = 0;
   let stopRequest = false;
-  return new Promise((resolve, _) => {
-    function loop() {
-      if (stopRequest) {
-        return;
-      }
-      if (limit && count >= limit) {
-        return;
-      }
-      if (stack.length === 0) {
-        if (count === 0) {
-          resolve();
-        }
-        return;
+
+  function loop(resolve) {
+    while (true) {
+      if (stopRequest || (limit && count > limit) || stack.length === 0) {
+        break;
       }
       const reqInfo = stack.shift();
-      delay().then(_ => {
-        loop();
-        delay().then(_ => toPromise(reqInfo.request, reqInfo.index)).then(result => {
-          reqInfo.result = result;
-          reqInfo.errors.length = 0;
-        }).catch(e => {
-          reqInfo.errors.push(e);
-          if (reqInfo.errors.length <= retryCount) {
-            stack.unshift(reqInfo);
-          } else {
-            if (stopImmediately) {
-              stopRequest = true;
-            }
-          }
-        }).then(_ => {
-          count--;
-          if (count === 0 && stack.length === 0) {
-            resolve();
-          } else {
-            loop();
-          }
-        });
-      });
       count++;
+      delay().then(_ => toPromise(reqInfo.request, reqInfo.index)).then(result => {
+        reqInfo.result = result;
+        reqInfo.errors.length = 0;
+      }).catch(e => {
+        reqInfo.errors.push(e);
+        if (reqInfo.errors.length <= retryCount) {
+          stack.unshift(reqInfo);
+        } else {
+          if (stopImmediately) {
+            stopRequest = true;
+          }
+        }
+      }).then(_ => {
+        count--;
+        loop(resolve);
+      });
     }
-    loop();
-  }).then(_ => {
+    if (stack.length === 0 && count === 0) {
+      resolve();
+    }
+  }
+  return new Promise(loop).then(_ => {
     const results = [];
     const errors = [];
     const unprocessed = [];
