@@ -76,7 +76,7 @@ describe('promise-util', function() {
     });
     it('should not cause stack-overflow', function() {
       this.timeout(1000 * 30);
-      return promiseUtil.batch(new Array(100000), () => Promise.resolve());
+      return promiseUtil.batch(new Array(100000).fill(), () => Promise.resolve());
     });
   });
   describe('#parallel()', function() {
@@ -124,7 +124,7 @@ describe('promise-util', function() {
       let calledCount = 0;
       return promiseUtil.parallel([1], (req, i) => {
         calledCount++;
-        return (calledCount >= 10) ? 1 : Promise.reject();
+        return (calledCount >= 10) ? Promise.resolve(1) : Promise.reject();
       }, {
         retry: 10
       }).then(res => {
@@ -143,9 +143,30 @@ describe('promise-util', function() {
         console.error('Unprocessed:', e.unprocessedRequests);
       });
     });
+    it('should work faster than batch if limit > 1', function() {
+      const start = Date.now();
+      return promiseUtil.batch(new Array(100).fill(), () => {
+        return promiseUtil.delay(10).then(_ => Promise.resolve());
+        // return Promise.resolve();
+      }).then(_ => {
+        const end1 = Date.now();
+        return promiseUtil.parallel(new Array(100).fill(), () => {
+          return promiseUtil.delay(10).then(_ => Promise.resolve());
+          // return Promise.resolve();
+        }, {
+          limit: 1
+        }).then(_ => {
+          const end2 = Date.now();
+          console.log(end1 - start, end2 - end1);
+          assert.isOk(end1 - start > end2 - end1)
+        });
+      });
+    });
     it('should not cause stack-overflow', function() {
       this.timeout(1000 * 30);
-      return promiseUtil.parallel(new Array(100000).fill(), () => Promise.resolve());
+      return promiseUtil.parallel(new Array(100000).fill(), () => Promise.resolve(), {
+        limit: 1
+      });
     });
   });
 });

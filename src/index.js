@@ -17,7 +17,7 @@ function parallel(requests, toPromise, options) {
       errors: [],
     };
   });
-  const stack = reqInfoList.concat(); //copy
+  const stack = reqInfoList.concat();
   let count = 0;
   let stopRequest = false;
 
@@ -28,13 +28,17 @@ function parallel(requests, toPromise, options) {
       }
       const reqInfo = stack.shift();
       count++;
-      delay().then(_ => toPromise(reqInfo.request, reqInfo.index)).then(result => {
+      let p = toPromise(reqInfo.request, reqInfo.index);
+      if (!p || !p.then) {
+        p = Promise.resolve(p);
+      }
+      p.then(result => {
         reqInfo.result = result;
         reqInfo.errors.length = 0;
       }).catch(e => {
-        reqInfo.errors.push(e);
+        reqInfo.errors.unshift(e);
         if (reqInfo.errors.length <= retryCount) {
-          stack.unshift(reqInfo);
+          stack.push(reqInfo);
         } else {
           if (stopImmediately) {
             stopRequest = true;
@@ -53,7 +57,7 @@ function parallel(requests, toPromise, options) {
     const results = [];
     const errors = [];
     const unprocessed = [];
-    for (let i = 0; i < requests.length; i++) {
+    for (let i = 0; i < reqInfoList.length; i++) {
       const reqInfo = reqInfoList[i];
       if (reqInfo.errors.length > 0) {
         const err = new Error(`Tried ${reqInfo.errors.length} times but could not get successful result. ` + formatErrorMessages(reqInfo.errors));
