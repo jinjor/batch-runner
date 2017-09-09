@@ -35,15 +35,14 @@ function parallel(requests, toPromise, options) {
         return;
       }
       const reqInfo = stack.shift();
-      Promise.resolve().then(_ => {
+      delay().then(_ => {
         loop();
-        toPromise(reqInfo.request, reqInfo.index).then(result => {
+        delay().then(_ => toPromise(reqInfo.request, reqInfo.index)).then(result => {
           reqInfo.result = result;
           reqInfo.errors.length = 0;
         }).catch(e => {
           reqInfo.errors.push(e);
           if (reqInfo.errors.length <= retryCount) {
-            // console.log('retrying...');
             stack.unshift(reqInfo);
           } else {
             if (stopImmediately) {

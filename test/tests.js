@@ -31,7 +31,7 @@ const requests = ['A', 'B', 'C', 'D', 'E', 'F', 'G'];
 const toPromise = (req, i) => getSomething(req);
 
 describe('promise-util', function() {
-  this.timeout(1000 * 10);
+  this.timeout(1000 * 30);
   describe('#batch()', function() {
     it('should work in minimal', function() {
       return promiseUtil.batch([], () => Promise.resolve());
@@ -83,9 +83,9 @@ describe('promise-util', function() {
     it('should handle empty requests', function() {
       return promiseUtil.parallel([], () => Promise.resolve());
     });
-    // it('should not cause stack-overflow', function() {
-    //   return promiseUtil.parallel(new Array(100000).fill(), () => Promise.resolve());
-    // });
+    it('should not cause stack-overflow', function() {
+      return promiseUtil.parallel(new Array(100000).fill(), () => Promise.resolve());
+    });
     it('should return correct results', function() {
       return promiseUtil.parallel([5, 6, 7], (req, index) => Promise.resolve([req, index])).then(res => {
         assert.deepEqual(res, [
@@ -121,6 +121,17 @@ describe('promise-util', function() {
         }
         // assert.deepEqual(e.errors, [0]);
         assert.deepEqual(e.unprocessedRequests, [5]);
+      });
+    });
+    it('should retry', function() {
+      let calledCount = 0;
+      return promiseUtil.parallel([1], (req, i) => {
+        calledCount++;
+        return (calledCount >= 10) ? 1 : Promise.reject();
+      }, {
+        retry: 10
+      }).then(res => {
+        assert.deepEqual(res, [1]);
       });
     });
     it('should work', function() {
