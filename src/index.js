@@ -4,73 +4,7 @@ function delay(ms) {
   });
 }
 
-function repeat(length, value) {
-  const arr = new Array(length);
-  for (let i = 0; i < length; i++) {
-    arr[i] = value;
-  }
-  return arr;
-}
-
 function parallel(requests, toPromise, options) {
-  const init = new Array(requests.length);
-  const reducer = (results, result, index) => {
-    results[index] = result;
-    return results;
-  }
-  return doParallel(requests, toPromise, reducer, init, options);
-}
-
-function doParallel(requests, toPromise, reducer, init, options) {
-  options = options || {};
-  const failures = new Array(requests.length);
-  const limit = options.limit || null;
-  const stopImmediately = options.stopImmediately || false;
-  let results = init;
-  let index = 0;
-  let count = 0;
-  let stop = false;
-  return new Promise((resolve, reject) => {
-    function send() {
-      if (stop) {
-        return;
-      }
-      if (limit && count >= limit) {
-        return;
-      }
-      if (index >= requests.length) {
-        if (count === 0) {
-          response(resolve, reject, requests, results, failures);
-        }
-        return;
-      }
-      Promise.resolve(index).then(index => {
-        send();
-        toPromise(requests[index], index).then(result => {
-          results = reducer(results, result, index);
-          failures[index] = null; // successful flag
-        }).catch(e => {
-          failures[index] = e;
-          if (stopImmediately) {
-            stop = true;
-          }
-        }).then(_ => {
-          count--;
-          if (count === 0) {
-            response(resolve, reject, requests, results, failures);
-          } else {
-            send();
-          }
-        });
-      });
-      index++;
-      count++;
-    }
-    send();
-  });
-}
-
-function parallel2(requests, toPromise, options) {
   options = options || {};
   const retryCount = options.retry || 0;
   const limit = options.limit || null;
@@ -88,7 +22,6 @@ function parallel2(requests, toPromise, options) {
   let stopRequest = false;
   return new Promise((resolve, _) => {
     function loop() {
-      // (count % 100 === 0) && console.log(count);
       if (stopRequest) {
         return;
       }
@@ -154,29 +87,6 @@ function parallel2(requests, toPromise, options) {
   });
 }
 
-
-function response(resolve, reject, requests, results, failures) {
-  const errors = [];
-  const unprocessed = [];
-  for (let i = 0; i < requests.length; i++) {
-    const failure = failures[i];
-    if (typeof failure !== 'undefined' && failure !== null) {
-      errors.push(failure);
-    }
-    if (failure !== null) {
-      unprocessed.push(requests[i]);
-    }
-  }
-  if (unprocessed.length > 0) {
-    const err = new Error('Some requests are unprocessed.');
-    err.errors = errors;
-    err.unprocessedRequests = unprocessed;
-    reject(err);
-  } else {
-    resolve(results);
-  }
-}
-
 function batch(requests, toPromise, options) {
   return reduce(requests, toPromise, (results, result, i) => {
     results.push(result);
@@ -211,7 +121,7 @@ function createRetryIntervals(retry, interval) {
   }
   const retryCount = (typeof retry === 'number') ? retry : retry.count || 0;
   const retryInterval = retry.interval || interval || 0;
-  return repeat(retryCount, retryInterval);
+  return new Array(retryCount).fill(retryInterval);
 }
 
 function doWithRetry(createPromise, retryIntervals, retryindex, errors) {
@@ -242,5 +152,5 @@ function formatErrorMessage(e, i) {
 module.exports = {
   delay: delay,
   batch: batch,
-  parallel: parallel2
+  parallel: parallel
 };
