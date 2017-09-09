@@ -70,6 +70,91 @@ function doParallel(requests, toPromise, reducer, init, options) {
   });
 }
 
+function parallel2(requests, toPromise, options) {
+  options = options || {};
+  const retryCount = options.retry || 0;
+  const limit = options.limit || null;
+  const stopImmediately = options.stopImmediately || false;
+  const reqInfoList = requests.map((req, i) => {
+    return {
+      index: i,
+      request: req,
+      result: undefined,
+      errors: [],
+    };
+  });
+  const stack = reqInfoList.concat(); //copy
+  let count = 0;
+  let stopRequest = false;
+  return new Promise((resolve, _) => {
+    function loop() {
+      // (count % 100 === 0) && console.log(count);
+      if (stopRequest) {
+        return;
+      }
+      if (limit && count >= limit) {
+        return;
+      }
+      const reqInfo = stack.shift();
+      if (typeof reqInfo === 'undefined') {
+        if (count === 0) {
+          resolve();
+        }
+        return;
+      }
+      Promise.resolve().then(_ => {
+        loop();
+        toPromise(reqInfo.request, reqInfo.index).then(result => {
+          reqInfo.result = result;
+          reqInfo.errors.length = 0;
+        }).catch(e => {
+          reqInfo.errors.push(e);
+          if (reqInfo.errors.length <= retryCount) {
+            // console.log('retrying...');
+            stack.unshift(reqInfo);
+          } else {
+            if (stopImmediately) {
+              stopRequest = true;
+            }
+          }
+        }).then(_ => {
+          count--;
+          if (count === 0) {
+            resolve();
+          } else {
+            loop();
+          }
+        });
+      });
+      count++;
+    }
+    loop();
+  }).then(_ => {
+    const results = [];
+    const errors = [];
+    const unprocessed = [];
+    for (let i = 0; i < requests.length; i++) {
+      const reqInfo = reqInfoList[i];
+      if (reqInfo.errors.length > 0) {
+        const err = new Error(`Tried ${reqInfo.errors.length} times but could not get successful result.`);
+        err.errors = reqInfo.errors;
+        errors.push(err);
+        unprocessed.push(reqInfo.request);
+      } else {
+        results.push(reqInfo.result);
+      }
+    }
+    if (errors.length) {
+      const err = new Error('Some requests are unprocessed.');
+      err.errors = errors;
+      err.unprocessedRequests = unprocessed;
+      return Promise.reject(err);
+    }
+    return results;
+  });
+}
+
+
 function response(resolve, reject, requests, results, failures) {
   const errors = [];
   const unprocessed = [];
@@ -157,5 +242,5 @@ function formatErrorMessage(e, i) {
 module.exports = {
   delay: delay,
   batch: batch,
-  parallel: parallel
+  parallel: parallel2
 };
