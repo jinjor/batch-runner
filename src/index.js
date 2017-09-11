@@ -138,7 +138,7 @@ function doWithRetry(createPromise, shouldRetry, retryIntervals, retryIndex, err
     const retryInterval = retryIntervals[retryIndex];
     if (shouldRetry(e) && typeof retryInterval === 'number') {
       return delay(retryInterval).then(_ => {
-        return doWithRetry(createPromise, retryIntervals, retryIndex + 1, errors);
+        return doWithRetry(createPromise, shouldRetry, retryIntervals, retryIndex + 1, errors);
       });
     }
     return Promise.reject(reduceErrors(errors));

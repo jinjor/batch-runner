@@ -65,6 +65,37 @@ describe('promise-util', function() {
         assert.deepEqual(e.unprocessedRequests, [6, 7]);
       });
     });
+    it('should retry', function() {
+      let calledCount = 0;
+      return promiseUtil.batch([1], (req, i) => {
+        calledCount++;
+        return (calledCount >= 10) ? 1 : Promise.reject();
+      }, {
+        retry: {
+          count: 10
+        }
+      }).then(res => {
+        assert.deepEqual(res, [1]);
+      });
+    });
+    it('should retry only if shouldRetry() returns true', function() {
+      let calledCount = 0;
+      return promiseUtil.batch([1], (req, i) => {
+        calledCount++;
+        return (calledCount >= 2) ? 1 : Promise.reject();
+      }, {
+        retry: {
+          count: 10,
+          shouldRetry: _ => false
+        }
+      }).then(res => {
+        return Promise.reject('unexpectedly succeeded');
+      }).catch(e => {
+        if (e === 'unexpectedly succeeded') {
+          assert.fail(e);
+        }
+      });
+    });
     it('should work', function() {
       return promiseUtil.batch(requests, toPromise, {
         interval: 10,
@@ -211,11 +242,29 @@ describe('promise-util', function() {
       let calledCount = 0;
       return promiseUtil.parallel([1], (req, i) => {
         calledCount++;
-        return (calledCount >= 10) ? Promise.resolve(1) : Promise.reject();
+        return (calledCount >= 10) ? 1 : Promise.reject();
       }, {
         retry: 10
       }).then(res => {
         assert.deepEqual(res, [1]);
+      });
+    });
+    it('should retry only if shouldRetry() returns true', function() {
+      let calledCount = 0;
+      return promiseUtil.parallel([1], (req, i) => {
+        calledCount++;
+        return (calledCount >= 2) ? 1 : Promise.reject();
+      }, {
+        retry: {
+          count: 10,
+          shouldRetry: _ => false
+        }
+      }).then(res => {
+        return Promise.reject('unexpectedly succeeded');
+      }).catch(e => {
+        if (e === 'unexpectedly succeeded') {
+          assert.fail(e);
+        }
       });
     });
     it('should work', function() {
