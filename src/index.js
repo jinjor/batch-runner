@@ -23,16 +23,12 @@ function parallel(requests, toPromise, options) {
 
   function loop(resolve) {
     while (true) {
-      if (stopRequest || (limit && count > limit) || stack.length === 0) {
+      if (stopRequest || (limit && count >= limit) || stack.length === 0) {
         break;
       }
       const reqInfo = stack.shift();
       count++;
-      let p = toPromise(reqInfo.request, reqInfo.index);
-      if (!p || !p.then) {
-        p = Promise.resolve(p);
-      }
-      p.then(result => {
+      Promise.resolve().then(_ => toPromise(reqInfo.request, reqInfo.index)).then(result => {
         reqInfo.result = result;
         reqInfo.errors.length = 0;
       }).catch(e => {
@@ -92,7 +88,7 @@ function reduce(requests, toPromise, reducer, init, options) {
   return requests.reduce((memo, request, i) => {
     return memo.then(results => {
       const wait = (i && interval) ? delay(interval) : Promise.resolve();
-      const createPromise = () => toPromise(request, i).then(result => reducer(results, result, i));
+      const createPromise = () => Promise.resolve().then(_ => toPromise(request, i)).then(result => reducer(results, result, i));
       return wait.then(results => {
         return doWithRetry(createPromise, retryIntervals, 0, []).catch(err => {
           err.unprocessedRequests = requests.slice(i);

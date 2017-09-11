@@ -44,6 +44,11 @@ describe('promise-util', function() {
         ]);
       });
     });
+    it('should allow toPromise which does not return Promise type', function() {
+      return promiseUtil.batch([5, 6, 7], (req, index) => index).then(res => {
+        assert.deepEqual(res, [0, 1, 2]);
+      });
+    });
     it('should handle falsy requests', function() {
       return promiseUtil.batch([0, false, null], req => Promise.resolve(req)).then(res => {
         assert.deepEqual(res, [0, false, null])
@@ -92,6 +97,11 @@ describe('promise-util', function() {
         ]);
       });
     });
+    it('should allow toPromise which does not return Promise type', function() {
+      return promiseUtil.parallel([5, 6, 7], (req, index) => index).then(res => {
+        assert.deepEqual(res, [0, 1, 2]);
+      });
+    });
     it('should return results in order', function() {
       return promiseUtil.parallel(
         [5, 6, 7],
@@ -102,6 +112,68 @@ describe('promise-util', function() {
           [6, 1],
           [7, 2]
         ]);
+      });
+    });
+    it('should work in parallel', function() {
+      const log = [];
+      return promiseUtil.parallel(
+        [5, 6, 7],
+        (req, index) => {
+          log.push(req);
+          return promiseUtil.delay(100).then(_ => {
+            log.push(index);
+          });
+        }
+      ).then(res => {
+        assert.deepEqual(log, [5, 6, 7, 0, 1, 2]);
+      });
+    });
+    it('should limit concurrency', function() {
+      const log = [];
+      return promiseUtil.parallel(
+        [5, 6, 7],
+        (req, index) => {
+          log.push(req);
+          return promiseUtil.delay(100).then(_ => {
+            log.push(index);
+          });
+        }, {
+          limit: 1
+        }
+      ).then(res => {
+        assert.deepEqual(log, [5, 0, 6, 1, 7, 2]);
+      });
+    });
+    it('should limit concurrency 2', function() {
+      const log = [];
+      return promiseUtil.parallel(
+        [5, 6, 7],
+        (req, index) => {
+          log.push(req);
+          return promiseUtil.delay(100).then(_ => {
+            log.push(index);
+          });
+        }, {
+          limit: 2
+        }
+      ).then(res => {
+        assert.deepEqual(log, [5, 6, 0, 1, 7, 2]);
+      });
+    });
+    it('should limit concurrency 3', function() {
+      const log = [];
+      return promiseUtil.parallel(
+        [5, 6, 7],
+        (req, index) => {
+          log.push(req);
+          return promiseUtil.delay(100).then(_ => {
+            log.push(index);
+          });
+        }, {
+          limit: 3
+        }
+      ).then(res => {
+        assert.deepEqual(log, [5, 6, 7, 0, 1, 2]);
       });
     });
     it('should handle falsy requests', function() {
@@ -144,6 +216,7 @@ describe('promise-util', function() {
       });
     });
     it('should work faster than batch if limit > 1', function() {
+      this.timeout(1000 * 5);
       const start = Date.now();
       return promiseUtil.batch(new Array(100).fill(), () => {
         return promiseUtil.delay(10).then(_ => Promise.resolve());
@@ -154,7 +227,7 @@ describe('promise-util', function() {
           return promiseUtil.delay(10).then(_ => Promise.resolve());
           // return Promise.resolve();
         }, {
-          limit: 1
+          limit: 2
         }).then(_ => {
           const end2 = Date.now();
           console.log(end1 - start, end2 - end1);
