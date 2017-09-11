@@ -83,7 +83,6 @@ function makeLoopFunction(reqInfoList, toPromise, interval, retryCount, retryInt
   return loop;
 }
 
-
 function makeResults(reqInfoList) {
   const results = [];
   const errors = [];
@@ -91,9 +90,7 @@ function makeResults(reqInfoList) {
   for (let i = 0; i < reqInfoList.length; i++) {
     const reqInfo = reqInfoList[i];
     if (reqInfo.errors.length > 0) {
-      const err = new Error(`Tried ${reqInfo.errors.length} times but could not get successful result. ` + formatErrorMessages(reqInfo.errors));
-      err.errors = reqInfo.errors;
-      errors.push(err);
+      errors.push(reqInfo.errors[reqInfo.errors.length - 1]);
     } else {
       results.push(reqInfo.result);
     }
@@ -108,15 +105,6 @@ function makeResults(reqInfoList) {
     return Promise.reject(err);
   }
   return results;
-}
-
-
-function formatErrorMessages(errors) {
-  return errors.map(formatErrorMessage).join(' ');
-}
-
-function formatErrorMessage(e, i) {
-  return '[' + (i + 1) + '] ' + (e ? e.message || JSON.stringify(e) : '');
 }
 
 module.exports = {
