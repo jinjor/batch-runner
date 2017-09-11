@@ -80,12 +80,13 @@ function reduce(requests, toPromise, reducer, init, options) {
   options = options || {};
   const interval = options.interval || 0;
   const retryIntervals = createRetryIntervals(options.retry, options.interval);
+  const shouldRetry = e => true;
   return requests.reduce((memo, request, i) => {
     return memo.then(results => {
       const wait = (i && interval) ? delay(interval) : Promise.resolve();
       const createPromise = () => Promise.resolve().then(_ => toPromise(request, i)).then(result => reducer(results, result, i));
       return wait.then(results => {
-        return doWithRetry(createPromise, retryIntervals, 0, []).catch(err => {
+        return doWithRetry(createPromise, shouldRetry, retryIntervals, 0, []).catch(err => {
           err.unprocessedRequests = requests.slice(i);
           return Promise.reject(err);
         });
@@ -106,11 +107,11 @@ function createRetryIntervals(retry, interval) {
   return new Array(retryCount).fill(retryInterval);
 }
 
-function doWithRetry(createPromise, retryIntervals, retryindex, errors) {
+function doWithRetry(createPromise, shouldRetry, retryIntervals, retryindex, errors) {
   return createPromise().catch(e => {
     errors.push(e);
     const retryInterval = retryIntervals[retryindex];
-    if (typeof retryInterval === 'number') {
+    if (shouldRetry(e) && typeof retryInterval === 'number') {
       return delay(retryInterval).then(_ => {
         return doWithRetry(createPromise, retryIntervals, retryindex + 1, errors);
       });
