@@ -6,6 +6,7 @@ function delay(ms) {
 
 function parallel(requests, toPromise, options) {
   options = options || {};
+  const interval = 0;
   const retryCount = options.retry || 0;
   const retryInterval = 0;
   const limit = options.limit || null;
@@ -22,6 +23,7 @@ function parallel(requests, toPromise, options) {
   let count = 0;
   let stopRequest = false;
   let retriedCount = 0;
+  let lastRequestTime = null;
 
   function loop(resolve) {
     while (true) {
@@ -30,7 +32,10 @@ function parallel(requests, toPromise, options) {
       }
       const reqInfo = stack.shift();
       count++;
-      Promise.resolve().then(_ => toPromise(reqInfo.request, reqInfo.index)).then(result => {
+      const requestTime = Date.now();
+      const waitTime = lastRequestTime ? Math.max(0, lastRequestTime + interval - requestTime) : 0;
+      const wait = waitTime ? delay(waitTime) : Promise.resolve();
+      wait.then(_ => toPromise(reqInfo.request, reqInfo.index)).then(result => {
         reqInfo.result = result;
         reqInfo.errors.length = 0;
       }).catch(e => {
@@ -43,6 +48,7 @@ function parallel(requests, toPromise, options) {
         count--;
         loop(resolve);
       });
+      lastRequestTime = requestTime;
     }
     if (stopRequest && count === 0) {
       if (stack.length > 0 && retriedCount < retryCount) {
@@ -125,7 +131,7 @@ function createRetryIntervals(retry, interval) {
 function doWithRetry(createPromise, shouldRetry, retryIntervals, retryIndex, errors) {
   return createPromise().catch(e => {
     errors.push(e);
-    const retryInterval = retryIntervals[retryindex];
+    const retryInterval = retryIntervals[retryIndex];
     if (shouldRetry(e) && typeof retryInterval === 'number') {
       return delay(retryInterval).then(_ => {
         return doWithRetry(createPromise, retryIntervals, retryIndex + 1, errors);
