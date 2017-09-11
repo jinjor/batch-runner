@@ -24,79 +24,92 @@ function batch(requests, toPromise, options) {
       errors: [],
     };
   });
+  const loop = makeLoopFunction(reqInfoList, toPromise, interval, retryCount, retryInterval, limit, shouldRetry);
+  return new Promise(loop).then(_ => makeResults(reqInfoList));
+}
+
+function makeLoopFunction(reqInfoList, toPromise, interval, retryCount, retryInterval, limit, shouldRetry) {
   const stack = reqInfoList.concat();
   let count = 0;
   let stopRequest = false;
   let retriedCount = 0;
   let lastRequestTime = null;
 
-  function loop(resolve) {
-    while (true) {
-      if (stopRequest || (limit && count >= limit) || stack.length === 0) {
-        break;
-      }
-      const reqInfo = stack.shift();
-      count++;
-      const requestTime = Date.now();
-      const waitTime = lastRequestTime ? Math.max(0, lastRequestTime + interval - requestTime) : 0;
-      const wait = waitTime ? delay(waitTime) : Promise.resolve();
-      wait.then(_ => toPromise(reqInfo.request, reqInfo.index)).then(result => {
-        reqInfo.result = result;
-        reqInfo.ok = true;
-        reqInfo.errors.length = 0;
-      }).catch(e => {
-        reqInfo.errors.push(e);
-        if (shouldRetry(e)) {
-          stack.unshift(reqInfo);
+  const loop = (resolve, reject) => {
+    try {
+      while (true) {
+        if (stopRequest || (limit && count >= limit) || stack.length === 0) {
+          break;
         }
-        stopRequest = true;
-      }).then(_ => {
-        count--;
-        loop(resolve);
-      });
-      lastRequestTime = requestTime;
-    }
-    if (stopRequest && count === 0) {
-      if (stack.length > 0 && retriedCount < retryCount) {
-        const wait = (typeof retryInterval === 'number') ? delay(retryInterval) : Promise.resolve();
-        wait.then(_ => {
-          stopRequest = false;
-          retriedCount++;
-          loop(resolve);
+        const reqInfo = stack.shift();
+        count++;
+        const requestTime = Date.now();
+        const waitTime = lastRequestTime ? Math.max(0, lastRequestTime + interval - requestTime) : 0;
+        const wait = waitTime ? delay(waitTime) : Promise.resolve();
+        wait.then(_ => toPromise(reqInfo.request, reqInfo.index)).then(result => {
+          reqInfo.result = result;
+          reqInfo.ok = true;
+          reqInfo.errors.length = 0;
+        }).catch(e => {
+          reqInfo.errors.push(e);
+          if (shouldRetry(e)) {
+            stack.unshift(reqInfo);
+          }
+          stopRequest = true;
+        }).then(_ => {
+          count--;
+          loop(resolve, reject);
         });
-      } else {
+        lastRequestTime = requestTime;
+      }
+      if (stopRequest && count === 0) {
+        if (stack.length > 0 && retriedCount < retryCount) {
+          const wait = (typeof retryInterval === 'number') ? delay(retryInterval) : Promise.resolve();
+          wait.then(_ => {
+            stopRequest = false;
+            retriedCount++;
+            loop(resolve, reject);
+          });
+        } else {
+          resolve();
+        }
+      } else if (stack.length === 0 && count === 0) {
         resolve();
       }
-    } else if (stack.length === 0 && count === 0) {
-      resolve();
+    } catch (e) {
+      reject(e);
+    };
+  }
+  return loop;
+}
+
+
+function makeResults(reqInfoList) {
+  const results = [];
+  const errors = [];
+  const unprocessed = [];
+  for (let i = 0; i < reqInfoList.length; i++) {
+    const reqInfo = reqInfoList[i];
+    if (reqInfo.errors.length > 0) {
+      const err = new Error(`Tried ${reqInfo.errors.length} times but could not get successful result. ` + formatErrorMessages(reqInfo.errors));
+      err.errors = reqInfo.errors;
+      errors.push(err);
+    } else {
+      results.push(reqInfo.result);
+    }
+    if (!reqInfo.ok) {
+      unprocessed.push(reqInfo.request);
     }
   }
-  return new Promise(loop).then(_ => {
-    const results = [];
-    const errors = [];
-    const unprocessed = [];
-    for (let i = 0; i < reqInfoList.length; i++) {
-      const reqInfo = reqInfoList[i];
-      if (reqInfo.errors.length > 0) {
-        const err = new Error(`Tried ${reqInfo.errors.length} times but could not get successful result. ` + formatErrorMessages(reqInfo.errors));
-        err.errors = reqInfo.errors;
-        errors.push(err);
-      } else {
-        results.push(reqInfo.result);
-      }
-      if (!reqInfo.ok) {
-        unprocessed.push(reqInfo.request);
-      }
-    }
-    if (errors.length) {
-      const err = new Error('Some requests are unprocessed.');
-      err.errors = errors;
-      err.unprocessedRequests = unprocessed;
-      return Promise.reject(err);
-    }
-    return results;
-  });
+  if (errors.length) {
+    const err = new Error('Some requests are unprocessed.');
+    err.errors = errors;
+    err.unprocessedRequests = unprocessed;
+    return Promise.reject(err);
+  }
+  return results;
 }
+
 
 function formatErrorMessages(errors) {
   return errors.map(formatErrorMessage).join(' ');
