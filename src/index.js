@@ -122,13 +122,13 @@ function createRetryIntervals(retry, interval) {
   return new Array(retryCount).fill(retryInterval);
 }
 
-function doWithRetry(createPromise, shouldRetry, retryIntervals, retryindex, errors) {
+function doWithRetry(createPromise, shouldRetry, retryIntervals, retryIndex, errors) {
   return createPromise().catch(e => {
     errors.push(e);
     const retryInterval = retryIntervals[retryindex];
     if (shouldRetry(e) && typeof retryInterval === 'number') {
       return delay(retryInterval).then(_ => {
-        return doWithRetry(createPromise, retryIntervals, retryindex + 1, errors);
+        return doWithRetry(createPromise, retryIntervals, retryIndex + 1, errors);
       });
     }
     return Promise.reject(reduceErrors(errors));
