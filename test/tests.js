@@ -134,7 +134,7 @@ describe('promise-util', function() {
         [5, 6, 7],
         (req, index) => {
           log.push(req);
-          return promiseUtil.delay(100).then(_ => {
+          return promiseUtil.delay(index * 20 + 20).then(_ => {
             log.push(index);
           });
         }, {
@@ -150,14 +150,14 @@ describe('promise-util', function() {
         [5, 6, 7],
         (req, index) => {
           log.push(req);
-          return promiseUtil.delay(100).then(_ => {
+          return promiseUtil.delay(index * 20 + 20).then(_ => {
             log.push(index);
           });
         }, {
           limit: 2
         }
       ).then(res => {
-        assert.deepEqual(log, [5, 6, 0, 1, 7, 2]);
+        assert.deepEqual(log, [5, 6, 0, 7, 1, 2]);
       });
     });
     it('should limit concurrency 3', function() {
@@ -166,7 +166,7 @@ describe('promise-util', function() {
         [5, 6, 7],
         (req, index) => {
           log.push(req);
-          return promiseUtil.delay(100).then(_ => {
+          return promiseUtil.delay(index * 20 + 20).then(_ => {
             log.push(index);
           });
         }, {
@@ -204,6 +204,7 @@ describe('promise-util', function() {
       });
     });
     it('should work', function() {
+      this.timeout(1000 * 10);
       return promiseUtil.parallel(requests, toPromise, {
         limit: 1,
         retry: 0

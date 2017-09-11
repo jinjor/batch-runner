@@ -7,6 +7,7 @@ function delay(ms) {
 function parallel(requests, toPromise, options) {
   options = options || {};
   const retryCount = options.retry || 0;
+  const retryInterval = 0;
   const limit = options.limit || null;
   const shouldRetry = e => true;
   const reqInfoList = requests.map((req, i) => {
@@ -19,10 +20,12 @@ function parallel(requests, toPromise, options) {
   });
   const stack = reqInfoList.concat();
   let count = 0;
+  let stopRequest = false;
+  let retriedCount = 0;
 
   function loop(resolve) {
     while (true) {
-      if ((limit && count >= limit) || stack.length === 0) {
+      if (stopRequest || (limit && count >= limit) || stack.length === 0) {
         break;
       }
       const reqInfo = stack.shift();
@@ -32,15 +35,27 @@ function parallel(requests, toPromise, options) {
         reqInfo.errors.length = 0;
       }).catch(e => {
         reqInfo.errors.push(e);
-        if (shouldRetry(e) && reqInfo.errors.length <= retryCount) {
+        if (shouldRetry(e)) {
           stack.unshift(reqInfo);
         }
+        stopRequest = true;
       }).then(_ => {
         count--;
         loop(resolve);
       });
     }
-    if (stack.length === 0 && count === 0) {
+    if (stopRequest && count === 0) {
+      if (stack.length > 0 && retriedCount < retryCount) {
+        const wait = (typeof retryInterval === 'number') ? delay(retryInterval) : Promise.resolve();
+        wait.then(_ => {
+          stopRequest = false;
+          retriedCount++;
+          loop(resolve);
+        });
+      } else {
+        resolve();
+      }
+    } else if (stack.length === 0 && count === 0) {
       resolve();
     }
   }
