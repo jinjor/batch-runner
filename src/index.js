@@ -7,14 +7,15 @@ function delay(ms) {
 function parallel(requests, toPromise, options) {
   options = options || {};
   const interval = 0;
-  const retryCount = options.retry || 0;
-  const retryInterval = 0;
+  const retryCount = (options.retry && typeof options.retry.count === 'number') ? options.retry.count : options.retry || 0;
+  const retryInterval = (options.retry && typeof options.retry.interval === 'number') ? options.retry.interval : 0;
   const limit = options.limit || null;
-  const shouldRetry = e => true;
+  const shouldRetry = (options.retry && typeof options.retry.shouldRetry === 'function') ? options.retry.shouldRetry : (e => true);
   const reqInfoList = requests.map((req, i) => {
     return {
       index: i,
       request: req,
+      ok: false,
       result: undefined,
       errors: [],
     };
@@ -37,6 +38,7 @@ function parallel(requests, toPromise, options) {
       const wait = waitTime ? delay(waitTime) : Promise.resolve();
       wait.then(_ => toPromise(reqInfo.request, reqInfo.index)).then(result => {
         reqInfo.result = result;
+        reqInfo.ok = true;
         reqInfo.errors.length = 0;
       }).catch(e => {
         reqInfo.errors.push(e);
@@ -75,9 +77,11 @@ function parallel(requests, toPromise, options) {
         const err = new Error(`Tried ${reqInfo.errors.length} times but could not get successful result. ` + formatErrorMessages(reqInfo.errors));
         err.errors = reqInfo.errors;
         errors.push(err);
-        unprocessed.push(reqInfo.request);
       } else {
         results.push(reqInfo.result);
+      }
+      if (!reqInfo.ok) {
+        unprocessed.push(reqInfo.request);
       }
     }
     if (errors.length) {
@@ -101,7 +105,7 @@ function reduce(requests, toPromise, reducer, init, options) {
   options = options || {};
   const interval = options.interval || 0;
   const retryIntervals = createRetryIntervals(options.retry, options.interval);
-  const shouldRetry = e => true;
+  const shouldRetry = (options.retry && typeof options.retry.shouldRetry === 'function') ? options.retry.shouldRetry : (e => true);
   return requests.reduce((memo, request, i) => {
     return memo.then(results => {
       const wait = (i && interval) ? delay(interval) : Promise.resolve();

@@ -55,14 +55,14 @@ describe('promise-util', function() {
       });
     });
     it('should return correct error', function() {
-      return promiseUtil.batch([5], _ => Promise.reject(0)).then(_ => {
+      return promiseUtil.batch([5, 6, 7], req => (req === 6) ? Promise.reject(0) : 1).then(_ => {
         return Promise.reject('unexpectedly succeeded');
       }).catch(e => {
         if (e === 'unexpectedly succeeded') {
           assert.fail(e);
         }
         assert.deepEqual(e.errors, [0]);
-        assert.deepEqual(e.unprocessedRequests, [5]);
+        assert.deepEqual(e.unprocessedRequests, [6, 7]);
       });
     });
     it('should work', function() {
@@ -182,14 +182,29 @@ describe('promise-util', function() {
       });
     });
     it('should return correct error', function() {
-      return promiseUtil.parallel([5], _ => Promise.reject(0)).then(_ => {
+      return promiseUtil.parallel([5, 6, 7], req => (req === 6) ? Promise.reject(0) : req, {
+        limit: 1
+      }).then(_ => {
         return Promise.reject('unexpectedly succeeded');
       }).catch(e => {
         if (e === 'unexpectedly succeeded') {
           assert.fail(e);
         }
         // assert.deepEqual(e.errors, [0]);
-        assert.deepEqual(e.unprocessedRequests, [5]);
+        assert.deepEqual(e.unprocessedRequests, [6, 7]);
+      });
+    });
+    it('should return correct error 2', function() {
+      return promiseUtil.parallel([5, 6, 7], req => (req === 6) ? promiseUtil.delay(100).then(_ => Promise.reject(0)) : req, {
+        limit: 3
+      }).then(_ => {
+        return Promise.reject('unexpectedly succeeded');
+      }).catch(e => {
+        if (e === 'unexpectedly succeeded') {
+          assert.fail(e);
+        }
+        // assert.deepEqual(e.errors, [0]);
+        assert.deepEqual(e.unprocessedRequests, [6]);
       });
     });
     it('should retry', function() {
