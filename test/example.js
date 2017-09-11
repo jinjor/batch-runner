@@ -6,7 +6,7 @@ let i = 0;
 
 function getSomething(req) {
   return new Promise((resolve, reject) => {
-    setTimeout(function() {
+    setTimeout(() => {
       i++;
       if (i % 5 === 3 || i % 5 === 4) {
         return reject(new Error('cannot get something'));
@@ -30,34 +30,33 @@ function getRandomArbitary(min, max) {
 const requests = ['A', 'B', 'C', 'D', 'E', 'F', 'G'];
 const toPromise = (req, i) => getSomething(req);
 
+function doBatch(options) {
+  i = 0;
+  return promiseUtil.batch(requests, toPromise, options).then(results => {
+    console.log(results);
+  }).catch(e => {
+    console.log('Error:', e.message);
+    console.log('Errors:', e.errors.map(e => e.message));
+    console.log('Unprocessed:', e.unprocessedRequests);
+  });
+}
+
 describe('promise-util', function() {
   describe('#batch()', function() {
     it('should work', function() {
-      return promiseUtil.batch(requests, toPromise, {
+      return doBatch({
         interval: 10,
+        parallel: 3
+      });
+    });
+    it('should work', function() {
+      return doBatch({
+        interval: 10,
+        parallel: 3,
         retry: {
           count: 2,
           interval: 100
         }
-      }).then(results => {
-        console.log(results);
-      }).catch(e => {
-        console.error('Error:', e.message);
-        console.error('Unprocessed:', e.unprocessedRequests);
-      });
-    });
-  });
-  describe('#batch() with { parallel }', function() {
-    it('should work', function() {
-      this.timeout(1000 * 10);
-      return promiseUtil.batch(requests, toPromise, {
-        parallel: true,
-        retry: 0
-      }).then(results => {
-        console.log(results);
-      }).catch(e => {
-        console.error('Error:', e.message);
-        console.error('Unprocessed:', e.unprocessedRequests);
       });
     });
   });

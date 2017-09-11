@@ -239,26 +239,6 @@ describe('promise-util', function() {
         }
       });
     });
-    it('should work faster than batch if limit > 1', function() {
-      this.timeout(1000 * 5);
-      const start = Date.now();
-      return promiseUtil.batch(new Array(100).fill(), () => {
-        return promiseUtil.delay(10).then(_ => Promise.resolve());
-        // return Promise.resolve();
-      }).then(_ => {
-        const end1 = Date.now();
-        return promiseUtil.batch(new Array(100).fill(), () => {
-          return promiseUtil.delay(10).then(_ => Promise.resolve());
-          // return Promise.resolve();
-        }, {
-          parallel: 2
-        }).then(_ => {
-          const end2 = Date.now();
-          console.log(end1 - start, end2 - end1);
-          assert.isOk(end1 - start > end2 - end1)
-        });
-      });
-    });
     it('should not cause stack-overflow', function() {
       this.timeout(1000 * 30);
       return promiseUtil.batch(new Array(100000).fill(), () => Promise.resolve());

@@ -11,27 +11,11 @@ const toPromise = (req, i) => Promise.resolve(req.toLowerCase());
 
 promiseUtil.batch(requests, toPromise, {
   interval: 10,
+  parallel: 3,
   retry: {
     count: 2,
     interval: 100
   }
-}).then(results => {
-  console.log(results);
-}).catch(e => {
-  console.error('Error:', e.message);
-  console.error('Errors:', e.errors);
-  console.error('Unprocessed:', e.unprocessedRequests);
-});
-```
-
-## parallel(requests, toPromise, options)
-
-```javascript
-const requests = ['A', 'B', 'C', 'D', 'E', 'F', 'G'];
-const toPromise = (req, i) => Promise.resolve(req.toLowerCase());
-
-promiseUtil.parallel(requests, toPromise, {
-  limit: 3
 }).then(results => {
   console.log(results);
 }).catch(e => {
