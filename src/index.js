@@ -8,7 +8,7 @@ function parallel(requests, toPromise, options) {
   options = options || {};
   const retryCount = options.retry || 0;
   const limit = options.limit || null;
-  const stopImmediately = options.stopImmediately || false;
+  const shouldRetry = e => true;
   const reqInfoList = requests.map((req, i) => {
     return {
       index: i,
@@ -19,11 +19,10 @@ function parallel(requests, toPromise, options) {
   });
   const stack = reqInfoList.concat();
   let count = 0;
-  let stopRequest = false;
 
   function loop(resolve) {
     while (true) {
-      if (stopRequest || (limit && count >= limit) || stack.length === 0) {
+      if ((limit && count >= limit) || stack.length === 0) {
         break;
       }
       const reqInfo = stack.shift();
@@ -33,12 +32,8 @@ function parallel(requests, toPromise, options) {
         reqInfo.errors.length = 0;
       }).catch(e => {
         reqInfo.errors.push(e);
-        if (reqInfo.errors.length <= retryCount) {
+        if (shouldRetry(e) && reqInfo.errors.length <= retryCount) {
           stack.unshift(reqInfo);
-        } else {
-          if (stopImmediately) {
-            stopRequest = true;
-          }
         }
       }).then(_ => {
         count--;
