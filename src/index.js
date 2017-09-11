@@ -32,9 +32,9 @@ function parallel(requests, toPromise, options) {
         reqInfo.result = result;
         reqInfo.errors.length = 0;
       }).catch(e => {
-        reqInfo.errors.unshift(e);
+        reqInfo.errors.push(e);
         if (reqInfo.errors.length <= retryCount) {
-          stack.push(reqInfo);
+          stack.unshift(reqInfo);
         } else {
           if (stopImmediately) {
             stopRequest = true;
@@ -132,7 +132,7 @@ function reduceErrors(errors) {
 }
 
 function formatErrorMessages(errors) {
-  return errors.map(formatErrorMessage).join('\t');
+  return errors.map(formatErrorMessage).join(' ');
 }
 
 function formatErrorMessage(e, i) {

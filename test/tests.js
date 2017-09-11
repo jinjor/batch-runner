@@ -206,7 +206,7 @@ describe('promise-util', function() {
     it('should work', function() {
       return promiseUtil.parallel(requests, toPromise, {
         limit: 1,
-        retry: 2
+        retry: 0
       }).then(results => {
         console.log(results);
       }).catch(e => {
