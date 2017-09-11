@@ -4,12 +4,16 @@ function delay(ms) {
   });
 }
 
-function parallel(requests, toPromise, options) {
+function batch(requests, toPromise, options) {
   options = options || {};
   const interval = 0;
   const retryCount = (options.retry && typeof options.retry.count === 'number') ? options.retry.count : options.retry || 0;
   const retryInterval = (options.retry && typeof options.retry.interval === 'number') ? options.retry.interval : 0;
-  const limit = options.limit || null;
+  const limit = (options.parallel === true) ?
+    null :
+    (typeof options.parallel === 'number') ?
+    options.parallel :
+    1;
   const shouldRetry = (options.retry && typeof options.retry.shouldRetry === 'function') ? options.retry.shouldRetry : (e => true);
   const reqInfoList = requests.map((req, i) => {
     return {
@@ -94,12 +98,6 @@ function parallel(requests, toPromise, options) {
   });
 }
 
-function batch2(requests, toPromise, options) {
-  return parallel(requests, toPromise, Object.assign({
-    limit: 1
-  }, options))
-}
-
 function formatErrorMessages(errors) {
   return errors.map(formatErrorMessage).join(' ');
 }
@@ -110,6 +108,5 @@ function formatErrorMessage(e, i) {
 
 module.exports = {
   delay: delay,
-  batch: batch2,
-  parallel: parallel
+  batch: batch,
 };
