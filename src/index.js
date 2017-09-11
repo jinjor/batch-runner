@@ -94,62 +94,10 @@ function parallel(requests, toPromise, options) {
   });
 }
 
-function batch(requests, toPromise, options) {
-  return reduce(requests, toPromise, (results, result, i) => {
-    results.push(result);
-    return results;
-  }, [], options);
-}
-
-function reduce(requests, toPromise, reducer, init, options) {
-  options = options || {};
-  const interval = options.interval || 0;
-  const retryIntervals = createRetryIntervals(options.retry, options.interval);
-  const shouldRetry = (options.retry && typeof options.retry.shouldRetry === 'function') ? options.retry.shouldRetry : (e => true);
-  return requests.reduce((memo, request, i) => {
-    return memo.then(results => {
-      const wait = (i && interval) ? delay(interval) : Promise.resolve();
-      const createPromise = () => Promise.resolve().then(_ => toPromise(request, i)).then(result => reducer(results, result, i));
-      return wait.then(results => {
-        return doWithRetry(createPromise, shouldRetry, retryIntervals, 0, []).catch(err => {
-          err.unprocessedRequests = requests.slice(i);
-          return Promise.reject(err);
-        });
-      });
-    });
-  }, Promise.resolve(init));
-}
-
-function createRetryIntervals(retry, interval) {
-  if (!retry) {
-    return [];
-  }
-  if (retry.length) {
-    return retry;
-  }
-  const retryCount = (typeof retry === 'number') ? retry : retry.count || 0;
-  const retryInterval = retry.interval || interval || 0;
-  return new Array(retryCount).fill(retryInterval);
-}
-
-function doWithRetry(createPromise, shouldRetry, retryIntervals, retryIndex, errors) {
-  return createPromise().catch(e => {
-    errors.push(e);
-    const retryInterval = retryIntervals[retryIndex];
-    if (shouldRetry(e) && typeof retryInterval === 'number') {
-      return delay(retryInterval).then(_ => {
-        return doWithRetry(createPromise, shouldRetry, retryIntervals, retryIndex + 1, errors);
-      });
-    }
-    return Promise.reject(reduceErrors(errors));
-  });
-}
-
-function reduceErrors(errors) {
-  const errorMessage = formatErrorMessages(errors);
-  const e = new Error(errorMessage);
-  e.errors = errors;
-  return e;
+function batch2(requests, toPromise, options) {
+  return parallel(requests, toPromise, Object.assign({
+    limit: 1
+  }, options))
 }
 
 function formatErrorMessages(errors) {
@@ -162,6 +110,6 @@ function formatErrorMessage(e, i) {
 
 module.exports = {
   delay: delay,
-  batch: batch,
+  batch: batch2,
   parallel: parallel
 };
