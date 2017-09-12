@@ -6,7 +6,7 @@ function delay(ms) {
 
 function batch(requests, toPromise, options) {
   options = options || {};
-  const interval = 0;
+  const interval = options.interval || 0;
   const retryCount = (options.retry && typeof options.retry.count === 'number') ? options.retry.count : options.retry || 0;
   const retryInterval = (options.retry && typeof options.retry.interval === 'number') ? options.retry.interval : 0;
   const limit = (options.parallel === true) ?
@@ -45,6 +45,8 @@ function makeLoopFunction(reqInfoList, toPromise, interval, retryCount, retryInt
         count++;
         const requestTime = Date.now();
         const waitTime = lastRequestTime ? Math.max(0, lastRequestTime + interval - requestTime) : 0;
+
+        lastRequestTime = requestTime + waitTime;
         const wait = waitTime ? delay(waitTime) : Promise.resolve();
         wait.then(_ => toPromise(reqInfo.request, reqInfo.index)).then(result => {
           reqInfo.result = result;
@@ -60,7 +62,7 @@ function makeLoopFunction(reqInfoList, toPromise, interval, retryCount, retryInt
           count--;
           loop(resolve, reject);
         });
-        lastRequestTime = requestTime;
+
       }
       if (stopRequest && count === 0) {
         if (stack.length > 0 && retriedCount < retryCount) {

@@ -1,6 +1,8 @@
 promise-util
 ====
 
+[![Build Status](https://travis-ci.org/jinjor/promise-util.svg)](https://travis-ci.org/jinjor/promise-util)
+
 A promise utility for personal use.
 
 ## batch(requests, toPromise, options)
@@ -19,9 +21,9 @@ promiseUtil.batch(requests, toPromise, {
 }).then(results => {
   console.log(results);
 }).catch(e => {
-  console.error('Error:', e.message);
-  console.error('Errors:', e.errors);
-  console.error('Unprocessed:', e.unprocessedRequests);
+  console.log('Error:', e.message);
+  console.log('Errors:', e.errors);
+  console.log('Unprocessed:', e.unprocessedRequests);
 });
 ```
 
