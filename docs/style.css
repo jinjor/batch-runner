@@ -1,0 +1,65 @@
+label {
+  width: 100px;
+}
+
+.row {
+  display: flex;
+  border-bottom: solid 1px #aaa;
+}
+
+.header {
+  width: 100px;
+}
+
+.body {
+  position: relative;
+  width: 500px;
+}
+
+.result {
+  position: absolute;
+  height: 20px;
+}
+
+.circle {
+  position: absolute;
+  top: 3px;
+  width: 14px;
+  height: 14px;
+  background-color: gray;
+  border-radius: 50%;
+}
+
+.circle:first-child {
+  left: 0;
+}
+
+.circle:last-child {
+  right: 0;
+}
+
+.bar {
+  position: absolute;
+  top: 8px;
+  bottom: 8px;
+  left: 5px;
+  right: 5px;
+  background-color: gray;
+}
+
+.result.success .circle, .result.success .bar {
+  background-color: green;
+}
+
+.result.error .circle, .result.error .bar {
+  background-color: red;
+}
+
+.response {
+  right: 0;
+  width: 250px;
+}
+
+.response.error {
+  color: red;
+}
