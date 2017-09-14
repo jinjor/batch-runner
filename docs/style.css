@@ -1,5 +1,9 @@
-label {
-  width: 100px;
+.option {
+  display: flex;
+}
+
+.option>label {
+  width: 20ch;
 }
 
 .row {
@@ -7,13 +11,25 @@ label {
   border-bottom: solid 1px #aaa;
 }
 
+.row.list-header {
+  border-top: solid 1px #aaa;
+}
+
+.row.list-header>.body {
+  border-top: solid 1px #aaa;
+  background-color: #ddd;
+}
+
 .header {
-  width: 100px;
+  width: 80px;
+  text-align: right;
+  padding-right: 10px;
+  background-color: #ddd;
 }
 
 .body {
   position: relative;
-  width: 500px;
+  flex-grow: 1;
 }
 
 .result {
@@ -57,7 +73,9 @@ label {
 
 .response {
   right: 0;
-  width: 250px;
+  width: 100px;
+  padding-left: 10px;
+  background-color: #ddd;
 }
 
 .response.error {

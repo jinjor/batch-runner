@@ -98,9 +98,9 @@ function render(start, results) {
     s = renderRequest(s, result);
   });
   list.innerHTML = s;
-  const rowElements = document.querySelectorAll('.row');
+  const rowElements = document.querySelectorAll('#list .row');
   results.forEach((result, i) => {
-    const resultElements = rowElements[i].querySelectorAll('.result');
+    const resultElements = rowElements[i].querySelectorAll('#list .result');
     result.results.forEach((r, j) => {
       if (r.requestStart && r.requestEnd) {
         const resultElement = resultElements[j];
@@ -177,11 +177,15 @@ button.addEventListener('click', e => {
   const interval = +document.getElementById('interval').value;
   const parallel = +document.getElementById('parallel').value;
   const retry = +document.getElementById('retry').value;
+  const retryInterval = +document.getElementById('retry-interval').value;
 
   doBatch({
     interval: interval,
     parallel: parallel,
-    retry: retry,
+    retry: {
+      count: retry,
+      interval: retryInterval
+    }
   }).then(results => {
     console.log(results);
   }).catch(e => {
