@@ -5,7 +5,6 @@
   "license": "MIT",
   "scripts": {
     "test": "mocha test/tests.js",
-    "posttest": "mocha test/example.js",
     "demo": "webpack"
   },
   "devDependencies": {
