@@ -52,6 +52,7 @@ function makeLoopFunction(reqInfoList, toPromise, interval, retryCount, retryInt
           reqInfo.result = result;
           reqInfo.ok = true;
           reqInfo.errors.length = 0;
+          retriedCount = 0;
         }).catch(e => {
           reqInfo.errors.push(e);
           if (shouldRetry(e)) {

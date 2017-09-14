@@ -89,7 +89,18 @@ function getRandomArbitary(min, max) {
 }
 
 const requests = ['A', 'B', 'C', 'D', 'E', 'F', 'G'];
+let results = [];
 const scale = 0.8;
+
+function reset() {
+  i = 0;
+  results = requests.map(req => {
+    return {
+      request: req,
+      results: []
+    };
+  });
+}
 
 function render(start, results) {
   const list = document.getElementById('list');
@@ -141,16 +152,12 @@ function renderRequest(s, result) {
 }
 
 
-function doBatch(options) {
-  i = 0;
-  const results = [];
+function execute(options) {
+
   const start = Date.now();
+  render(start, results);
 
   return promiseUtil.batch(requests, (req, i) => {
-    results[i] = results[i] || {
-      request: req,
-      results: []
-    };
     var result = {};
     results[i].results.push(result);
     result.requestStart = Date.now();
@@ -179,7 +186,7 @@ button.addEventListener('click', e => {
   const retry = +document.getElementById('retry').value;
   const retryInterval = +document.getElementById('retry-interval').value;
 
-  doBatch({
+  execute({
     interval: interval,
     parallel: parallel,
     retry: {
@@ -194,6 +201,9 @@ button.addEventListener('click', e => {
     console.log('Unprocessed:', e.unprocessedRequests);
   });
 });
+
+reset();
+render(Date.now(), results);
 
 
 /***/ }),
@@ -254,6 +264,7 @@ function makeLoopFunction(reqInfoList, toPromise, interval, retryCount, retryInt
           reqInfo.result = result;
           reqInfo.ok = true;
           reqInfo.errors.length = 0;
+          retriedCount = 0;
         }).catch(e => {
           reqInfo.errors.push(e);
           if (shouldRetry(e)) {
