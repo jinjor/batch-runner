@@ -3,9 +3,9 @@ batch-runner
 
 [![Build Status](https://travis-ci.org/jinjor/batch-runner.svg)](https://travis-ci.org/jinjor/batch-runner)
 
-A promise utility for personal use.
+A promise utility for batching.
 
-## batch(requests, toPromise, options)
+## run(requests, toPromise, options)
 
 ```javascript
 const batchRunner = require('batch-runner');
