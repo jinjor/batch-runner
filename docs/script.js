@@ -67,7 +67,7 @@
 /* 0 */
 /***/ (function(module, exports, __webpack_require__) {
 
-const promiseUtil = __webpack_require__(1);
+const batchRunner = __webpack_require__(1);
 
 let i = 0;
 
@@ -157,7 +157,7 @@ function execute(options) {
   const start = Date.now();
   render(start, results);
 
-  return promiseUtil.batch(requests, (req, i) => {
+  return batchRunner.run(requests, (req, i) => {
     var result = {};
     results[i].results.push(result);
     result.requestStart = Date.now();
@@ -216,7 +216,7 @@ function delay(ms) {
   });
 }
 
-function batch(requests, toPromise, options) {
+function run(requests, toPromise, options) {
   options = options || {};
   const interval = options.interval || 0;
   const retryCount = (options.retry && typeof options.retry.count === 'number') ? options.retry.count : options.retry || 0;
@@ -324,7 +324,7 @@ function makeResults(reqInfoList) {
 
 module.exports = {
   delay: delay,
-  batch: batch,
+  run: run,
 };
 
 

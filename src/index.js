@@ -4,7 +4,7 @@ function delay(ms) {
   });
 }
 
-function batch(requests, toPromise, options) {
+function run(requests, toPromise, options) {
   options = options || {};
   const interval = options.interval || 0;
   const retryCount = (options.retry && typeof options.retry.count === 'number') ? options.retry.count : options.retry || 0;
@@ -112,5 +112,5 @@ function makeResults(reqInfoList) {
 
 module.exports = {
   delay: delay,
-  batch: batch,
+  run: run,
 };

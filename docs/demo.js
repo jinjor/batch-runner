@@ -1,4 +1,4 @@
-const promiseUtil = require('../src/index.js');
+const batchRunner = require('../src/index.js');
 
 let i = 0;
 
@@ -88,7 +88,7 @@ function execute(options) {
   const start = Date.now();
   render(start, results);
 
-  return promiseUtil.batch(requests, (req, i) => {
+  return batchRunner.run(requests, (req, i) => {
     var result = {};
     results[i].results.push(result);
     result.requestStart = Date.now();

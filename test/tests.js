@@ -1,4 +1,4 @@
-const promiseUtil = require('../src/index.js');
+const batchRunner = require('../src/index.js');
 const chai = require('chai');
 const assert = chai.assert;
 
@@ -6,16 +6,16 @@ function flatten(nested) {
   return Array.prototype.concat.apply([], nested);
 }
 
-describe('promise-util', function() {
-  describe('#batch()', function() {
+describe('batch-runner', function() {
+  describe('#run()', function() {
     function testEcho(request, options, expected) {
-      return promiseUtil.batch(request, (req, index) => req, options).then(res => {
+      return batchRunner.run(request, (req, index) => req, options).then(res => {
         assert.deepEqual(res, expected);
       });
     }
 
     function testEchoWithIndex(request, options, expectedFlattenArray) {
-      return promiseUtil.batch(request, (req, index) => [req, index], options).then(res => {
+      return batchRunner.run(request, (req, index) => [req, index], options).then(res => {
         assert.deepEqual(flatten(res), expectedFlattenArray);
       });
     }
@@ -41,7 +41,7 @@ describe('promise-util', function() {
 
     function testInterval(requests, from, to) {
       const start = Date.now();
-      return promiseUtil.batch(requests, (req, i) => req, {
+      return batchRunner.run(requests, (req, i) => req, {
         interval: 100
       }).then(res => {
         const end = Date.now();
@@ -61,7 +61,7 @@ describe('promise-util', function() {
     });
     it('should retry', function() {
       let calledCount = 0;
-      return promiseUtil.batch([1], (req, i) => {
+      return batchRunner.run([1], (req, i) => {
         calledCount++;
         return (calledCount >= 10) ? 1 : Promise.reject();
       }, {
@@ -74,7 +74,7 @@ describe('promise-util', function() {
     });
     it('should retry(parallel)', function() {
       let calledCount = 0;
-      return promiseUtil.batch([1], (req, i) => {
+      return batchRunner.run([1], (req, i) => {
         calledCount++;
         return (calledCount >= 10) ? 1 : Promise.reject();
       }, {
@@ -86,7 +86,7 @@ describe('promise-util', function() {
     });
     it('should retry(parallel 2)', function() {
       let calledCount = 0;
-      return promiseUtil.batch([5, 6], (req, i) => {
+      return batchRunner.run([5, 6], (req, i) => {
         calledCount++;
         return (calledCount % 2 === 0) ? [req, i, calledCount] : Promise.reject();
       }, {
@@ -101,9 +101,9 @@ describe('promise-util', function() {
     });
     it('should retry(parallel 3)', function() {
       let calledCount = 0;
-      return promiseUtil.batch([5, 6], (req, i) => {
+      return batchRunner.run([5, 6], (req, i) => {
         calledCount++;
-        return Promise.resolve(calledCount).then(calledCount => promiseUtil.delay(70).then(_ => {
+        return Promise.resolve(calledCount).then(calledCount => batchRunner.delay(70).then(_ => {
           return (calledCount % 2 === 0) ? [req, i, calledCount] : Promise.reject();
         }));
       }, {
@@ -119,7 +119,7 @@ describe('promise-util', function() {
     });
     it('should retry only if shouldRetry() returns true', function() {
       let calledCount = 0;
-      return promiseUtil.batch([1], (req, i) => {
+      return batchRunner.run([1], (req, i) => {
         calledCount++;
         return (calledCount >= 2) ? 1 : Promise.reject();
       }, {
@@ -137,7 +137,7 @@ describe('promise-util', function() {
     });
     it('should retry only if shouldRetry() returns true(parallel)', function() {
       let calledCount = 0;
-      return promiseUtil.batch([1], (req, i) => {
+      return batchRunner.run([1], (req, i) => {
         calledCount++;
         return (calledCount >= 2) ? 1 : Promise.reject();
       }, {
@@ -156,9 +156,9 @@ describe('promise-util', function() {
     });
 
     it('should return results in order', function() {
-      return promiseUtil.batch(
+      return batchRunner.run(
         [5, 6, 7],
-        (req, index) => promiseUtil.delay((5 - index) * 30).then(_ => [req, index]), {
+        (req, index) => batchRunner.delay((5 - index) * 30).then(_ => [req, index]), {
           parallel: true
         }
       ).then(res => {
@@ -172,11 +172,11 @@ describe('promise-util', function() {
 
     function testLimitedConcurrency(parallel, delayOfIndex, expectation) {
       const log = [];
-      return promiseUtil.batch(
+      return batchRunner.run(
         [5, 6, 7],
         (req, index) => {
           log.push(req);
-          return promiseUtil.delay(delayOfIndex(index)).then(_ => {
+          return batchRunner.delay(delayOfIndex(index)).then(_ => {
             log.push(index);
           });
         }, {
@@ -200,7 +200,7 @@ describe('promise-util', function() {
     });
 
     function testError(toPromise, parallel, expectedErrors, expectedUnprocessedRequests) {
-      return promiseUtil.batch([5, 6, 7], toPromise, {
+      return batchRunner.run([5, 6, 7], toPromise, {
         parallel: parallel,
       }).then(_ => {
         return Promise.reject('unexpectedly succeeded');
@@ -216,18 +216,18 @@ describe('promise-util', function() {
       return testError(req => (req === 6) ? Promise.reject(0) : req, 1, [0], [6, 7]);
     });
     it('should return correct error 2', function() {
-      return testError(req => (req === 6) ? promiseUtil.delay(20).then(_ => Promise.reject(0)) : req, 1, [0], [6, 7]);
+      return testError(req => (req === 6) ? batchRunner.delay(20).then(_ => Promise.reject(0)) : req, 1, [0], [6, 7]);
     });
     it('should return correct error 3', function() {
-      return testError(req => (req === 6) ? promiseUtil.delay(20).then(_ => Promise.reject(0)) : req, 2, [0], [6]);
+      return testError(req => (req === 6) ? batchRunner.delay(20).then(_ => Promise.reject(0)) : req, 2, [0], [6]);
     });
     it('should not cause stack-overflow', function() {
       this.timeout(1000 * 30);
-      return promiseUtil.batch(new Array(100000).fill(), () => Promise.resolve());
+      return batchRunner.run(new Array(100000).fill(), () => Promise.resolve());
     });
     it('should not cause stack-overflow (parallel)', function() {
       this.timeout(1000 * 30);
-      return promiseUtil.batch(new Array(100000).fill(), () => Promise.resolve(), {
+      return batchRunner.run(new Array(100000).fill(), () => Promise.resolve(), {
         parallel: true
       });
     });

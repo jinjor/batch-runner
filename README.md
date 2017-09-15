@@ -1,17 +1,18 @@
-promise-util
+batch-runner
 ====
 
-[![Build Status](https://travis-ci.org/jinjor/promise-util.svg)](https://travis-ci.org/jinjor/promise-util)
+[![Build Status](https://travis-ci.org/jinjor/batch-runner.svg)](https://travis-ci.org/jinjor/batch-runner)
 
 A promise utility for personal use.
 
 ## batch(requests, toPromise, options)
 
 ```javascript
+const batchRunner = require('batch-runner');
 const requests = ['A', 'B', 'C', 'D', 'E', 'F', 'G'];
 const toPromise = (req, i) => Promise.resolve(req.toLowerCase());
 
-promiseUtil.batch(requests, toPromise, {
+batchRunner.run(requests, toPromise, {
   interval: 10,
   parallel: 3,
   retry: {
@@ -27,14 +28,6 @@ promiseUtil.batch(requests, toPromise, {
 });
 ```
 
-## npm install
+## LICENSE
 
-[Alpha versions](https://github.com/jinjor/promise-util/tags) are available via GitHub.
-
-```json
-{
-  "dependencies": {
-    "promise-util": "git@github.com:jinjor/promise-util.git#0.x.x"
-  }
-}
-```
+MIT
