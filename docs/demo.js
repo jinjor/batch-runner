@@ -1,4 +1,12 @@
 const batchRunner = require('../src/index.js');
+const snabbdom = require('snabbdom');
+const h = require('snabbdom/h').default;
+const patch = snabbdom.init([
+  require('snabbdom/modules/style').default
+]);
+
+const container = document.getElementById('container');
+let vnode = null;
 
 let i = 0;
 
@@ -34,54 +42,46 @@ function reset() {
 }
 
 function render(start, results) {
-  const list = document.getElementById('list');
-  let s = '';
-  results.forEach(result => {
-    s = renderRequest(s, result);
-  });
-  list.innerHTML = s;
-  const rowElements = document.querySelectorAll('#list .row');
-  results.forEach((result, i) => {
-    const resultElements = rowElements[i].querySelectorAll('#list .result');
-    result.results.forEach((r, j) => {
-      if (r.requestStart && r.requestEnd) {
-        const resultElement = resultElements[j];
-        const time = r.requestEnd - r.requestStart;
-        resultElement.style.left = (r.requestStart - start) * scale + 'px';
-        resultElement.style.width = (time * scale) + 'px';
+  const newNode = h('div#list', results.map(result => {
+    return renderRequest(start, result);
+  }));
+  patch(vnode || container, newNode);
+  vnode = newNode;
+}
+
+function renderRequest(start, result) {
+  return h('div.row', [
+    h('div.header', [result.request]),
+    h('div.body', result.results.map(r => {
+      if (!r.requestEnd) {
+        return h(`div.result.${r.state}`);
       }
-    });
-  });
+      const time = r.requestEnd - r.requestStart;
+      const left = (r.requestStart - start) * scale + 'px';
+      const width = (time * scale) + 'px';
+      return h(`div.result.${r.state}`, {
+        style: {
+          left: left,
+          width: width
+        }
+      }, [
+        h('div.circle'),
+        h('div.bar'),
+        h('div.circle')
+      ]);
+    })),
+    (() => {
+      const r = result.results[result.results.length - 1];
+      if (r && r.response) {
+        return h('div.response', [r.response]);
+      } else if (r && r.error) {
+        return h('div.response.error', [r.error]);
+      } else {
+        return h('div.response');
+      }
+    })()
+  ]);
 }
-
-function renderRequest(s, result) {
-  s += `<div class="row">`;
-  s += `<div class="header">${result.request}</div>`;
-  s += `<div class="body">`;
-  result.results.forEach(r => {
-    s += `<div class="result ${r.state}">`;
-    if (r.requestEnd) {
-      s += `<div class="circle" data-request-start="${r.requestStart}"></div>`;
-      s += `<div class="bar"></div>`;
-      s += `<div class="circle" data-request-end="${r.requestEnd}"></div>`;
-    }
-    s += `</div>`;
-  });
-  s += `</div>`;
-  const r = result.results[result.results.length - 1];
-  if (r) {
-    if (r.response) {
-      s += `<div class="response">${r.response}</div>`;
-    } else if (r.error) {
-      s += `<div class="response error">${r.error}</div>`;
-    } else if (r.error) {
-      s += `<div class="response"></div>`;
-    }
-  }
-  s += `</div>`;
-  return s;
-}
-
 
 function execute(options) {
 
