@@ -1,11 +1,11 @@
 {
   "name": "batch-runner",
   "description": "A promise utility for batching",
-  "version": "0.6.0",
+  "version": "0.6.1",
   "main": "src/index.js",
   "license": "MIT",
   "keywords": ["promise", "batch"],
-  "homepage": ["https://github.com/jinjor/batch-runner"],
+  "homepage": "https://github.com/jinjor/batch-runner",
   "scripts": {
     "test": "mocha test/tests.js",
     "demo": "webpack"
