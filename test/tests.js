@@ -27,12 +27,12 @@ describe('batch-runner', function() {
     });
     it('should return correct results (parallel/empty)', function() {
       return testEchoWithIndex([], {
-        parallel: true
+        concurrency: Infinity
       }, []);
     });
     it('should return correct results (parallel)', function() {
       return testEchoWithIndex([5, 6, 7], {
-        parallel: true
+        concurrency: Infinity
       }, [5, 0, 6, 1, 7, 2]);
     });
     it('should handle falsy requests', function() {
@@ -78,7 +78,7 @@ describe('batch-runner', function() {
         calledCount++;
         return (calledCount >= 10) ? 1 : Promise.reject();
       }, {
-        parallel: true,
+        concurrency: Infinity,
         retry: 9
       }).then(res => {
         assert.deepEqual(res, [1]);
@@ -90,7 +90,7 @@ describe('batch-runner', function() {
         calledCount++;
         return (calledCount % 2 === 0) ? [req, i, calledCount] : Promise.reject();
       }, {
-        parallel: true,
+        concurrency: Infinity,
         retry: 9
       }).then(res => {
         assert.deepEqual(res, [
@@ -108,7 +108,7 @@ describe('batch-runner', function() {
         }));
       }, {
         interval: 20,
-        parallel: true,
+        concurrency: Infinity,
         retry: 9
       }).then(res => {
         assert.deepEqual(res, [
@@ -141,7 +141,7 @@ describe('batch-runner', function() {
         calledCount++;
         return (calledCount >= 2) ? 1 : Promise.reject();
       }, {
-        parallel: true,
+        concurrency: Infinity,
         retry: {
           count: 10,
           shouldRetry: _ => false
@@ -159,7 +159,7 @@ describe('batch-runner', function() {
       return batchRunner.run(
         [5, 6, 7],
         (req, index) => batchRunner.delay((5 - index) * 30).then(_ => [req, index]), {
-          parallel: true
+          concurrency: Infinity
         }
       ).then(res => {
         assert.deepEqual(res, [
@@ -170,7 +170,7 @@ describe('batch-runner', function() {
       });
     });
 
-    function testLimitedConcurrency(parallel, delayOfIndex, expectation) {
+    function testLimitedConcurrency(concurrency, delayOfIndex, expectation) {
       const log = [];
       return batchRunner.run(
         [5, 6, 7],
@@ -180,7 +180,7 @@ describe('batch-runner', function() {
             log.push(index);
           });
         }, {
-          parallel: parallel
+          concurrency: concurrency
         }
       ).then(res => {
         assert.deepEqual(log, expectation);
@@ -199,9 +199,9 @@ describe('batch-runner', function() {
       return testLimitedConcurrency(3, index => index * 10 + 10, [5, 6, 7, 0, 1, 2]);
     });
 
-    function testError(toPromise, parallel, expectedErrors, expectedUnprocessedRequests) {
+    function testError(toPromise, concurrency, expectedErrors, expectedUnprocessedRequests) {
       return batchRunner.run([5, 6, 7], toPromise, {
-        parallel: parallel,
+        concurrency: concurrency,
       }).then(_ => {
         return Promise.reject('unexpectedly succeeded');
       }).catch(e => {
@@ -228,7 +228,7 @@ describe('batch-runner', function() {
     it('should not cause stack-overflow (parallel)', function() {
       this.timeout(1000 * 30);
       return batchRunner.run(new Array(100000).fill(), () => Promise.resolve(), {
-        parallel: true
+        concurrency: Infinity
       });
     });
   });

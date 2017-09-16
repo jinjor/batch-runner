@@ -113,13 +113,13 @@ function execute(options) {
 button.addEventListener('click', e => {
   e.preventDefault();
   const interval = +document.getElementById('interval').value;
-  const parallel = +document.getElementById('parallel').value;
+  const concurrency = +document.getElementById('concurrency').value;
   const retry = +document.getElementById('retry').value;
   const retryInterval = +document.getElementById('retry-interval').value;
 
   execute({
     interval: interval,
-    parallel: parallel,
+    concurrency: concurrency,
     retry: {
       count: retry,
       interval: retryInterval

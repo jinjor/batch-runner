@@ -182,13 +182,13 @@ function execute(options) {
 button.addEventListener('click', e => {
   e.preventDefault();
   const interval = +document.getElementById('interval').value;
-  const parallel = +document.getElementById('parallel').value;
+  const concurrency = +document.getElementById('concurrency').value;
   const retry = +document.getElementById('retry').value;
   const retryInterval = +document.getElementById('retry-interval').value;
 
   execute({
     interval: interval,
-    parallel: parallel,
+    concurrency: concurrency,
     retry: {
       count: retry,
       interval: retryInterval
@@ -221,11 +221,7 @@ function run(requests, toPromise, options) {
   const interval = options.interval || 0;
   const retryCount = (options.retry && typeof options.retry.count === 'number') ? options.retry.count : options.retry || 0;
   const retryInterval = (options.retry && typeof options.retry.interval === 'number') ? options.retry.interval : 0;
-  const limit = (options.parallel === true) ?
-    null :
-    (typeof options.parallel === 'number') ?
-    options.parallel :
-    1;
+  const limit = (typeof options.concurrency === 'number') ? Math.max(options.concurrency, 1) : 1;
   const shouldRetry = (options.retry && typeof options.retry.shouldRetry === 'function') ? options.retry.shouldRetry : (e => true);
   const reqInfoList = requests.map((req, i) => {
     return {

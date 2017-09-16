@@ -14,7 +14,7 @@ const toPromise = (req, i) => Promise.resolve(req.toLowerCase());
 
 batchRunner.run(requests, toPromise, {
   interval: 10,
-  parallel: 3,
+  concurrency: 3,
   retry: {
     count: 2,
     interval: 100
