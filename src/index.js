@@ -1,16 +1,3 @@
-const Joi = require('joi');
-
-const schema = Joi.object().keys({
-  maxRetries: Joi.number().integer().min(0).default(0).unit('times'),
-  shouldRetry: Joi.func().default(() => true),
-  retryInterval: Joi.number().min(0).default(0).unit('milliseconds'),
-  concurrency: Joi.alternatives().try(
-    Joi.valid(Infinity),
-    Joi.number().integer().min(1)
-  ).default(1),
-  interval: Joi.number().min(0).default(0).unit('milliseconds'),
-});
-
 function delay(ms) {
   return new Promise((resolve, reject) => {
     setTimeout(resolve, ms);
@@ -18,12 +5,12 @@ function delay(ms) {
 }
 
 function run(requests, toPromise, options) {
-  options = Joi.attempt(options || {}, schema);
-  const interval = options.interval;
-  const maxRetries = options.maxRetries;
-  const retryInterval = options.retryInterval;
-  const concurrency = options.concurrency;
-  const shouldRetry = options.shouldRetry;
+  options = options || {};
+  const interval = options.interval || 0;
+  const maxRetries = options.maxRetries || 0;
+  const retryInterval = options.retryInterval || 0;
+  const concurrency = options.concurrency || 1;
+  const shouldRetry = options.shouldRetry || (_ => true);
 
   const reqInfoList = requests.map((req, i) => {
     return {

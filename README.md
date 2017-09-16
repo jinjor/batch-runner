@@ -15,11 +15,9 @@ const toPromise = (req, index) => Promise.resolve(req.toLowerCase());
 batchRunner.run(requests, toPromise, {
   interval: 10, // default: 0
   concurrency: 3, // default: 1
-  retry: {
-    count: 2, // default: 0
-    interval: 100, // default: 0
-    shouldRetry: error => true// default: err => true
-  }
+  maxRetries: 2, // default: 0
+  retryInterval: 100, // default: 0
+  shouldRetry: err => true //default: err => true
 }).then(results => {
   console.log(results);
 }).catch(e => {
@@ -27,6 +25,7 @@ batchRunner.run(requests, toPromise, {
   console.log('Results:', e.results());
   console.log('Errors:', e.errors());
   console.log('Unprocessed:', e.unprocessedRequests());
+  // see `e.items` for more information
 });
 ```
 

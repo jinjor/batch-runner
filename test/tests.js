@@ -264,15 +264,15 @@ describe('batch-runner', function() {
     it('should return correct error 3', function() {
       return testError(req => (req === 6) ? delay(20).then(_ => Promise.reject(0)) : req, 2, [0], [6]);
     });
-    // it('should not cause stack-overflow', function() {
-    //   this.timeout(1000 * 30);
-    //   return batchRunner.run(new Array(100000).fill(), () => Promise.resolve());
-    // });
-    // it('should not cause stack-overflow (parallel)', function() {
-    //   this.timeout(1000 * 30);
-    //   return batchRunner.run(new Array(100000).fill(), () => Promise.resolve(), {
-    //     concurrency: Infinity
-    //   });
-    // });
+    it('should not cause stack-overflow', function() {
+      this.timeout(1000 * 30);
+      return batchRunner.run(new Array(100000).fill(), () => Promise.resolve());
+    });
+    it('should not cause stack-overflow (parallel)', function() {
+      this.timeout(1000 * 30);
+      return batchRunner.run(new Array(100000).fill(), () => Promise.resolve(), {
+        concurrency: Infinity
+      });
+    });
   });
 });

@@ -349,10 +349,11 @@ function delay(ms) {
 function run(requests, toPromise, options) {
   options = options || {};
   const interval = options.interval || 0;
-  const maxRetries = (options.retry && typeof options.retry.count === 'number') ? options.retry.count : options.retry || 0;
-  const retryInterval = (options.retry && typeof options.retry.interval === 'number') ? options.retry.interval : 0;
-  const limit = (typeof options.concurrency === 'number') ? Math.max(options.concurrency, 1) : 1;
-  const shouldRetry = (options.retry && typeof options.retry.shouldRetry === 'function') ? options.retry.shouldRetry : (e => true);
+  const maxRetries = options.maxRetries || 0;
+  const retryInterval = options.retryInterval || 0;
+  const concurrency = options.concurrency || 1;
+  const shouldRetry = options.shouldRetry || (_ => true);
+
   const reqInfoList = requests.map((req, i) => {
     return {
       index: i,
@@ -371,7 +372,7 @@ function run(requests, toPromise, options) {
     }
     return -1;
   };
-  const loop = makeLoopFunction(reqInfoList, toPromise, interval, timeUntilNextRetry, limit, shouldRetry);
+  const loop = makeLoopFunction(reqInfoList, toPromise, interval, timeUntilNextRetry, concurrency, shouldRetry);
   return new Promise(loop).then(_ => makeResults(reqInfoList));
 }
 

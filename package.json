@@ -19,7 +19,5 @@
     "snabbdom": "^0.7.0",
     "webpack": "^3.5.6"
   },
-  "dependencies": {
-    "joi": "^11.0.1"
-  }
+  "dependencies": {}
 }
