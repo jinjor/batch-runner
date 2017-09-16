@@ -4,7 +4,10 @@ const schema = Joi.object().keys({
   maxRetries: Joi.number().integer().min(0).default(0).unit('times'),
   shouldRetry: Joi.func().default(() => true),
   retryInterval: Joi.number().min(0).default(0).unit('milliseconds'),
-  concurrency: [Joi.valid(Infinity), Joi.number().integer().min(1).default(1)],
+  concurrency: Joi.alternatives().try(
+    Joi.valid(Infinity),
+    Joi.number().integer().min(1)
+  ).default(1),
   interval: Joi.number().min(0).default(0).unit('milliseconds'),
 });
 
