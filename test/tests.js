@@ -248,16 +248,16 @@ describe('batch-runner', function() {
     });
 
     function testError(toPromise, concurrency, expectedErrors, expectedUnprocessedRequests) {
+      let failure = false;
       return batchRunner.run([5, 6, 7], toPromise, {
         concurrency: concurrency,
       }).then(_ => {
-        return Promise.reject('unexpectedly succeeded');
+        failure = true;
       }).catch(e => {
-        if (e === 'unexpectedly succeeded') {
-          assert.fail(e);
-        }
-        assert.deepEqual(e.errors, expectedErrors);
-        assert.deepEqual(e.unprocessedRequests, expectedUnprocessedRequests);
+        assert.deepEqual(e.errors(), expectedErrors);
+        assert.deepEqual(e.unprocessedRequests(), expectedUnprocessedRequests);
+      }).then(_ => {
+        failure && assert.fail('unexpectedly succeeded');
       });
     }
     it('should return correct error 1', function() {

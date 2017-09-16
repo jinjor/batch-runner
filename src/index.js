@@ -94,29 +94,32 @@ function makeLoopFunction(reqInfoList, toPromise, interval, timeUntilNextRetry, 
   }
   return loop;
 }
+const getResults = reqInfoList => () => {
+  return reqInfoList.filter(reqInfo => reqInfo.ok).map(reqInfo => {
+    return reqInfo.result;
+  });
+};
+const getErrors = reqInfoList => () => {
+  return reqInfoList.filter(reqInfo => reqInfo.errors.length).map(reqInfo => {
+    return reqInfo.errors[reqInfo.errors.length - 1];
+  });
+};
+const getUnprocessed = reqInfoList => () => {
+  return reqInfoList.filter(reqInfo => !reqInfo.ok).map(reqInfo => {
+    return reqInfo.request;
+  });
+};
 
 function makeResults(reqInfoList) {
-  const results = [];
-  const errors = [];
-  const unprocessed = [];
-  for (let i = 0; i < reqInfoList.length; i++) {
-    const reqInfo = reqInfoList[i];
-    if (reqInfo.errors.length > 0) {
-      errors.push(reqInfo.errors[reqInfo.errors.length - 1]);
-    } else {
-      results.push(reqInfo.result);
-    }
-    if (!reqInfo.ok) {
-      unprocessed.push(reqInfo.request);
-    }
-  }
-  if (errors.length) {
+  if (getErrors(reqInfoList)().length) {
     const err = new Error('Some requests are unprocessed.');
-    err.errors = errors;
-    err.unprocessedRequests = unprocessed;
+    err.items = reqInfoList;
+    err.results = getResults(reqInfoList);
+    err.errors = getErrors(reqInfoList);
+    err.unprocessedRequests = getUnprocessed(reqInfoList);
     return Promise.reject(err);
   }
-  return results;
+  return getResults(reqInfoList)();
 }
 
 module.exports = {

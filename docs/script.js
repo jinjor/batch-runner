@@ -170,7 +170,9 @@ const patch = snabbdom.init([
 ]);
 
 const container = document.getElementById('container');
+const infoContainer = document.getElementById('info-container');
 let vnode = null;
+let infoVnode = null;
 
 let i = 0;
 
@@ -193,6 +195,7 @@ function getRandomArbitary(min, max) {
 
 const requests = ['A', 'B', 'C', 'D', 'E', 'F', 'G'];
 let results = [];
+let info = {};
 let scale = 0;
 
 function reset() {
@@ -204,14 +207,43 @@ function reset() {
       results: []
     };
   });
+  info = {};
 }
 
-function render(start, results) {
-  const newNode = h('div#list', results.map(result => {
-    return renderRequest(start, result);
-  }));
+function render(start, results, info) {
+  const newNode = renderList(start, results);
   patch(vnode || container, newNode);
   vnode = newNode;
+
+  const newInfoNode = renderInfo(info);
+  patch(infoVnode || infoContainer, newInfoNode);
+  infoVnode = newInfoNode;
+}
+
+function renderInfo(info) {
+  const items = [{
+    key: 'Results',
+    value: (info.results || []).join(', ')
+  }, {
+    key: 'Errors',
+    value: (info.errors || []).join(', ')
+  }, {
+    key: 'Unprocessed Requests',
+    value: (info.unprocessedRequests || []).join(', ')
+  }];
+  return h('div#info', items.map(item => {
+    return renderEachInfo(item);
+  }));
+}
+
+function renderEachInfo(item) {
+  return h('div', [item.key, ': ', item.value]);
+}
+
+function renderList(start, results) {
+  return h('div#list', results.map(result => {
+    return renderRequest(start, result);
+  }));
 }
 
 function renderRequest(start, result) {
@@ -251,28 +283,36 @@ function renderRequest(start, result) {
 function execute(options) {
   reset();
   const start = Date.now();
-  render(start, results);
+  render(start, results, info);
 
   return batchRunner.run(requests, (req, i) => {
     var result = {};
     results[i].results.push(result);
     result.requestStart = Date.now();
     result.state = 'waiting';
-    // render(start, results);
+    // render(start, results, info);
     return getSomething(req).then(res => {
       result.response = res;
       result.requestEnd = Date.now();
       result.state = 'success';
-      render(start, results);
+      render(start, results, info);
       return res;
     }).catch(e => {
       result.error = e;
       result.requestEnd = Date.now();
       result.state = 'error';
-      render(start, results);
+      render(start, results, info);
       return Promise.reject(e);
-    })
-  }, options);
+    });
+  }, options).then(results => {
+    info.results = results;
+  }).catch(e => {
+    info.results = e.results();
+    info.errors = e.errors();
+    info.unprocessedRequests = e.unprocessedRequests();
+  }).then(_ => {
+    render(start, results, info);
+  });
 }
 
 button.addEventListener('click', e => {
@@ -289,17 +329,11 @@ button.addEventListener('click', e => {
       count: retry,
       interval: retryInterval
     }
-  }).then(results => {
-    console.log(results);
-  }).catch(e => {
-    console.log('Error:', e.message);
-    console.log('Errors:', e.errors.map(e => e.message));
-    console.log('Unprocessed:', e.unprocessedRequests);
   });
 });
 
 reset();
-render(Date.now(), results);
+render(Date.now(), results, info);
 
 
 /***/ }),
@@ -328,12 +362,15 @@ function run(requests, toPromise, options) {
       errors: [],
     };
   });
+  const toRetryInterval = retriedCount => {
+    return retryInterval;
+  };
   const timeUntilNextRetry = retriedCount => {
     if (retriedCount < maxRetries) {
-      return retryInterval;
+      return toRetryInterval(retriedCount);
     }
     return -1;
-  }
+  };
   const loop = makeLoopFunction(reqInfoList, toPromise, interval, timeUntilNextRetry, limit, shouldRetry);
   return new Promise(loop).then(_ => makeResults(reqInfoList));
 }
@@ -399,29 +436,32 @@ function makeLoopFunction(reqInfoList, toPromise, interval, timeUntilNextRetry, 
   }
   return loop;
 }
+const getResults = reqInfoList => () => {
+  return reqInfoList.filter(reqInfo => reqInfo.ok).map(reqInfo => {
+    return reqInfo.result;
+  });
+};
+const getErrors = reqInfoList => () => {
+  return reqInfoList.filter(reqInfo => reqInfo.errors.length).map(reqInfo => {
+    return reqInfo.errors[reqInfo.errors.length - 1];
+  });
+};
+const getUnprocessed = reqInfoList => () => {
+  return reqInfoList.filter(reqInfo => !reqInfo.ok).map(reqInfo => {
+    return reqInfo.request;
+  });
+};
 
 function makeResults(reqInfoList) {
-  const results = [];
-  const errors = [];
-  const unprocessed = [];
-  for (let i = 0; i < reqInfoList.length; i++) {
-    const reqInfo = reqInfoList[i];
-    if (reqInfo.errors.length > 0) {
-      errors.push(reqInfo.errors[reqInfo.errors.length - 1]);
-    } else {
-      results.push(reqInfo.result);
-    }
-    if (!reqInfo.ok) {
-      unprocessed.push(reqInfo.request);
-    }
-  }
-  if (errors.length) {
+  if (getErrors(reqInfoList)().length) {
     const err = new Error('Some requests are unprocessed.');
-    err.errors = errors;
-    err.unprocessedRequests = unprocessed;
+    err.items = reqInfoList;
+    err.results = getResults(reqInfoList);
+    err.errors = getErrors(reqInfoList);
+    err.unprocessedRequests = getUnprocessed(reqInfoList);
     return Promise.reject(err);
   }
-  return results;
+  return getResults(reqInfoList)();
 }
 
 module.exports = {
