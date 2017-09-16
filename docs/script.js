@@ -319,16 +319,14 @@ button.addEventListener('click', e => {
   e.preventDefault();
   const interval = +document.getElementById('interval').value;
   const concurrency = +document.getElementById('concurrency').value;
-  const retry = +document.getElementById('retry').value;
+  const maxRetries = +document.getElementById('max-retries').value;
   const retryInterval = +document.getElementById('retry-interval').value;
 
   execute({
     interval: interval,
     concurrency: concurrency,
-    retry: {
-      count: retry,
-      interval: retryInterval
-    }
+    maxRetries: maxRetries,
+    retryInterval: retryInterval
   });
 });
 
