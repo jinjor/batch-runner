@@ -1,3 +1,33 @@
+const Joi = require('joi');
+
+// const schema = Joi.object().keys({
+//   retry: [
+//     Joi.number().integer().min(0),
+//     Joi.object().keys({
+//       count: Joi.number().integer().min(1).required().default(0),
+//       shouldRetry: Joi.func().default(() => true),
+//       interval: Joi.number().min(0).default(0)
+//     })
+//   ],
+//   concurrency: Joi.number().integer().min(1).default(1),
+//   interval: Joi.number().min(0).default(0)
+// });
+const schema = Joi.object().keys({
+  maxRetries: Joi.number().integer().min(0).unit('times'),
+  shouldRetry: Joi.func().default(() => true),
+  retryInterval: Joi.number().min(0).default(0).unit('milliseconds'),
+  concurrency: Joi.number().integer().min(1).default(1),
+  interval: Joi.number().min(0).default(0).unit('milliseconds'),
+});
+const value = Joi.attempt({
+  maxRetries: 0,
+  concurrency: 1,
+  interval: 0
+}, schema);
+console.log(value);
+process.exit(1);
+
+
 function delay(ms) {
   return new Promise((resolve, reject) => {
     setTimeout(resolve, ms);
