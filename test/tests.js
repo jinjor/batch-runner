@@ -2,6 +2,12 @@ const batchRunner = require('../src/index.js');
 const chai = require('chai');
 const assert = chai.assert;
 
+function delay(ms) {
+  return new Promise((resolve, reject) => {
+    setTimeout(resolve, ms);
+  });
+}
+
 function flatten(nested) {
   return Array.prototype.concat.apply([], nested);
 }
@@ -103,7 +109,7 @@ describe('batch-runner', function() {
       let calledCount = 0;
       return batchRunner.run([5, 6], (req, i) => {
         calledCount++;
-        return Promise.resolve(calledCount).then(calledCount => batchRunner.delay(70).then(_ => {
+        return Promise.resolve(calledCount).then(calledCount => delay(70).then(_ => {
           return (calledCount % 2 === 0) ? [req, i, calledCount] : Promise.reject();
         }));
       }, {
@@ -158,7 +164,7 @@ describe('batch-runner', function() {
     it('should return results in order', function() {
       return batchRunner.run(
         [5, 6, 7],
-        (req, index) => batchRunner.delay((5 - index) * 30).then(_ => [req, index]), {
+        (req, index) => delay((5 - index) * 30).then(_ => [req, index]), {
           concurrency: Infinity
         }
       ).then(res => {
@@ -176,7 +182,7 @@ describe('batch-runner', function() {
         [5, 6, 7],
         (req, index) => {
           log.push(req);
-          return batchRunner.delay(delayOfIndex(index)).then(_ => {
+          return delay(delayOfIndex(index)).then(_ => {
             log.push(index);
           });
         }, {
@@ -216,10 +222,10 @@ describe('batch-runner', function() {
       return testError(req => (req === 6) ? Promise.reject(0) : req, 1, [0], [6, 7]);
     });
     it('should return correct error 2', function() {
-      return testError(req => (req === 6) ? batchRunner.delay(20).then(_ => Promise.reject(0)) : req, 1, [0], [6, 7]);
+      return testError(req => (req === 6) ? delay(20).then(_ => Promise.reject(0)) : req, 1, [0], [6, 7]);
     });
     it('should return correct error 3', function() {
-      return testError(req => (req === 6) ? batchRunner.delay(20).then(_ => Promise.reject(0)) : req, 2, [0], [6]);
+      return testError(req => (req === 6) ? delay(20).then(_ => Promise.reject(0)) : req, 2, [0], [6]);
     });
     it('should not cause stack-overflow', function() {
       this.timeout(1000 * 30);

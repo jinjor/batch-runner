@@ -59,7 +59,6 @@ function makeLoopFunction(reqInfoList, toPromise, interval, retryCount, retryInt
           count--;
           loop(resolve, reject);
         });
-
       }
       if (stopRequest && count === 0) {
         if (stack.length > 0 && retriedCount < retryCount) {
@@ -107,6 +106,5 @@ function makeResults(reqInfoList) {
 }
 
 module.exports = {
-  delay: delay,
-  run: run,
+  run: run
 };
