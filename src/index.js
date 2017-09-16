@@ -20,12 +20,15 @@ function run(requests, toPromise, options) {
       errors: [],
     };
   });
+  const toRetryInterval = retriedCount => {
+    return retryInterval;
+  };
   const timeUntilNextRetry = retriedCount => {
     if (retriedCount < maxRetries) {
-      return retryInterval;
+      return toRetryInterval(retriedCount);
     }
     return -1;
-  }
+  };
   const loop = makeLoopFunction(reqInfoList, toPromise, interval, timeUntilNextRetry, limit, shouldRetry);
   return new Promise(loop).then(_ => makeResults(reqInfoList));
 }

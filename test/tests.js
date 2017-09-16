@@ -80,8 +80,9 @@ describe('batch-runner', function() {
       }).then(_ => {
         failure = true;
       }).catch(_ => {
-        failure && assert.fail('unexpectedly succeeded');
         assert.equal(calledCount, count + 1);
+      }).then(_ => {
+        failure && assert.fail('unexpectedly succeeded');
       });
     }
     it('should retry', function() {
@@ -179,7 +180,7 @@ describe('batch-runner', function() {
         }
       }).then(res => {
         failure = true;
-      }).catch(e => {
+      }).catch(e => {}).then(_ => {
         failure && assert.fail('unexpectedly succeeded');
       });
     });
@@ -197,7 +198,7 @@ describe('batch-runner', function() {
         }
       }).then(res => {
         failure = true;
-      }).catch(e => {
+      }).catch(e => {}).then(_ => {
         failure && assert.fail('unexpectedly succeeded');
       });
     });
