@@ -314,7 +314,7 @@ function delay(ms) {
 function run(requests, toPromise, options) {
   options = options || {};
   const interval = options.interval || 0;
-  const retryCount = (options.retry && typeof options.retry.count === 'number') ? options.retry.count : options.retry || 0;
+  const maxRetries = (options.retry && typeof options.retry.count === 'number') ? options.retry.count : options.retry || 0;
   const retryInterval = (options.retry && typeof options.retry.interval === 'number') ? options.retry.interval : 0;
   const limit = (typeof options.concurrency === 'number') ? Math.max(options.concurrency, 1) : 1;
   const shouldRetry = (options.retry && typeof options.retry.shouldRetry === 'function') ? options.retry.shouldRetry : (e => true);
@@ -327,11 +327,17 @@ function run(requests, toPromise, options) {
       errors: [],
     };
   });
-  const loop = makeLoopFunction(reqInfoList, toPromise, interval, retryCount, retryInterval, limit, shouldRetry);
+  const timeUntilNextRetry = retriedCount => {
+    if (retriedCount < maxRetries) {
+      return retryInterval;
+    }
+    return -1;
+  }
+  const loop = makeLoopFunction(reqInfoList, toPromise, interval, timeUntilNextRetry, limit, shouldRetry);
   return new Promise(loop).then(_ => makeResults(reqInfoList));
 }
 
-function makeLoopFunction(reqInfoList, toPromise, interval, retryCount, retryInterval, limit, shouldRetry) {
+function makeLoopFunction(reqInfoList, toPromise, interval, timeUntilNextRetry, limit, shouldRetry) {
   const stack = reqInfoList.concat();
   let count = 0;
   let stopRequest = false;
@@ -368,13 +374,18 @@ function makeLoopFunction(reqInfoList, toPromise, interval, retryCount, retryInt
         });
       }
       if (stopRequest && count === 0) {
-        if (stack.length > 0 && retriedCount < retryCount) {
-          const wait = (typeof retryInterval === 'number') ? delay(retryInterval) : Promise.resolve();
-          wait.then(_ => {
-            stopRequest = false;
-            retriedCount++;
-            loop(resolve, reject);
-          });
+        if (stack.length > 0) {
+          const time = timeUntilNextRetry(retriedCount);
+          if (typeof time !== 'number' || time < 0) {
+            resolve();
+          } else {
+            const waitForRetry = (time > 0) ? delay(time) : Promise.resolve();
+            waitForRetry.then(_ => {
+              stopRequest = false;
+              retriedCount++;
+              loop(resolve, reject);
+            });
+          }
         } else {
           resolve();
         }

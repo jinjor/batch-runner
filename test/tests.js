@@ -65,32 +65,38 @@ describe('batch-runner', function() {
     it('should take interval 3', function() {
       return testInterval([1, 2, 3, 4], 250, 350);
     });
-    it('should retry', function() {
+
+    function testRetry(count, concurrency) {
       let calledCount = 0;
+      let failure = false;
       return batchRunner.run([1], (req, i) => {
         calledCount++;
-        return (calledCount >= 10) ? 1 : Promise.reject();
+        return Promise.reject();
       }, {
+        concurrency: concurrency,
         retry: {
-          count: 9
+          count: count
         }
-      }).then(res => {
-        assert.deepEqual(res, [1]);
+      }).then(_ => {
+        failure = true;
+      }).catch(_ => {
+        failure && assert.fail('unexpectedly succeeded');
+        assert.equal(calledCount, count + 1);
       });
+    }
+    it('should retry', function() {
+      return testRetry(0);
+    });
+    it('should retry 2', function() {
+      return testRetry(9);
     });
     it('should retry(parallel)', function() {
-      let calledCount = 0;
-      return batchRunner.run([1], (req, i) => {
-        calledCount++;
-        return (calledCount >= 10) ? 1 : Promise.reject();
-      }, {
-        concurrency: Infinity,
-        retry: 9
-      }).then(res => {
-        assert.deepEqual(res, [1]);
-      });
+      return testRetry(0, Infinity);
     });
     it('should retry(parallel 2)', function() {
+      return testRetry(9, Infinity);
+    });
+    it('should retry(parallel 3)', function() {
       let calledCount = 0;
       return batchRunner.run([5, 6], (req, i) => {
         calledCount++;
@@ -105,7 +111,7 @@ describe('batch-runner', function() {
         ]);
       });
     });
-    it('should retry(parallel 3)', function() {
+    it('should retry(parallel 4)', function() {
       let calledCount = 0;
       return batchRunner.run([5, 6], (req, i) => {
         calledCount++;
@@ -123,8 +129,46 @@ describe('batch-runner', function() {
         ]);
       });
     });
+    it('should reset retry count on success', function() {
+      let calledCount = 0;
+      return batchRunner.run([5, 6], (req, i) => {
+        calledCount++;
+        return (calledCount % 2 === 0) ? [req, i, calledCount] : Promise.reject();
+      }, {
+        interval: 20,
+        retry: 1
+      }).then(res => {
+        assert.equal(calledCount, 4);
+        assert.deepEqual(res, [
+          [5, 0, 2],
+          [6, 1, 4]
+        ]);
+      });
+    });
+    it('should retry once if failed more than once at the same time', function() {
+      let calledCount = 0;
+      return batchRunner.run([5, 6], (req, i) => {
+        calledCount++;
+        return Promise.resolve(calledCount).then(calledCount => delay(50).then(_ => {
+          return (calledCount > 2) ? [req, i] : Promise.reject();
+        }));
+      }, {
+        interval: 10,
+        concurrency: Infinity,
+        retry: {
+          count: 1,
+          interval: 100
+        }
+      }).then(res => {
+        assert.deepEqual(res, [
+          [5, 0],
+          [6, 1]
+        ]);
+      });
+    });
     it('should retry only if shouldRetry() returns true', function() {
       let calledCount = 0;
+      let failure = false;
       return batchRunner.run([1], (req, i) => {
         calledCount++;
         return (calledCount >= 2) ? 1 : Promise.reject();
@@ -134,15 +178,14 @@ describe('batch-runner', function() {
           shouldRetry: _ => false
         }
       }).then(res => {
-        return Promise.reject('unexpectedly succeeded');
+        failure = true;
       }).catch(e => {
-        if (e === 'unexpectedly succeeded') {
-          assert.fail(e);
-        }
+        failure && assert.fail('unexpectedly succeeded');
       });
     });
     it('should retry only if shouldRetry() returns true(parallel)', function() {
       let calledCount = 0;
+      let failure = false;
       return batchRunner.run([1], (req, i) => {
         calledCount++;
         return (calledCount >= 2) ? 1 : Promise.reject();
@@ -153,11 +196,9 @@ describe('batch-runner', function() {
           shouldRetry: _ => false
         }
       }).then(res => {
-        return Promise.reject('unexpectedly succeeded');
+        failure = true;
       }).catch(e => {
-        if (e === 'unexpectedly succeeded') {
-          assert.fail(e);
-        }
+        failure && assert.fail('unexpectedly succeeded');
       });
     });
 
