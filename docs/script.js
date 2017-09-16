@@ -193,10 +193,11 @@ function getRandomArbitary(min, max) {
 
 const requests = ['A', 'B', 'C', 'D', 'E', 'F', 'G'];
 let results = [];
-const scale = 0.8;
+let scale = 0;
 
 function reset() {
   i = 0;
+  scale = window.innerWidth / 1200;
   results = requests.map(req => {
     return {
       request: req,
@@ -248,7 +249,7 @@ function renderRequest(start, result) {
 }
 
 function execute(options) {
-
+  reset();
   const start = Date.now();
   render(start, results);
 

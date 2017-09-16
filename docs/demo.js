@@ -29,10 +29,11 @@ function getRandomArbitary(min, max) {
 
 const requests = ['A', 'B', 'C', 'D', 'E', 'F', 'G'];
 let results = [];
-const scale = 0.8;
+let scale = 0;
 
 function reset() {
   i = 0;
+  scale = window.innerWidth / 1200;
   results = requests.map(req => {
     return {
       request: req,
@@ -84,7 +85,7 @@ function renderRequest(start, result) {
 }
 
 function execute(options) {
-
+  reset();
   const start = Date.now();
   render(start, results);
 
@@ -125,11 +126,11 @@ button.addEventListener('click', e => {
       interval: retryInterval
     }
   }).then(results => {
-    console.log(results);
+    // console.log(results);
   }).catch(e => {
-    console.log('Error:', e.message);
-    console.log('Errors:', e.errors.map(e => e.message));
-    console.log('Unprocessed:', e.unprocessedRequests);
+    // console.log('Error:', e.message);
+    // console.log('Errors:', e.errors.map(e => e.message));
+    // console.log('Unprocessed:', e.unprocessedRequests);
   });
 });
 

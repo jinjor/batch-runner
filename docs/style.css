@@ -2,8 +2,16 @@
   display: flex;
 }
 
+.option input {
+  width: 60px;
+}
+
 .option>label {
   width: 20ch;
+}
+
+#list {
+  overflow: hidden;
 }
 
 .row {
@@ -21,8 +29,7 @@
 
 .header {
   width: 80px;
-  text-align: right;
-  padding-right: 10px;
+  text-align: center;
   background-color: #ddd;
 }
 
@@ -37,10 +44,11 @@
 }
 
 .circle {
+  /*display: none;*/
   position: absolute;
-  top: 3px;
-  width: 14px;
-  height: 14px;
+  top: 5px;
+  width: 10px;
+  height: 10px;
   background-color: gray;
   border-radius: 50%;
 }
@@ -72,9 +80,10 @@
 
 .response {
   right: 0;
-  width: 100px;
-  padding-left: 10px;
+  width: 80px;
+  text-align: center;
   background-color: #ddd;
+  z-index: 1;
 }
 
 .response.error {
