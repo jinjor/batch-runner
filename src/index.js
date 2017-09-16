@@ -1,32 +1,12 @@
 const Joi = require('joi');
 
-// const schema = Joi.object().keys({
-//   retry: [
-//     Joi.number().integer().min(0),
-//     Joi.object().keys({
-//       count: Joi.number().integer().min(1).required().default(0),
-//       shouldRetry: Joi.func().default(() => true),
-//       interval: Joi.number().min(0).default(0)
-//     })
-//   ],
-//   concurrency: Joi.number().integer().min(1).default(1),
-//   interval: Joi.number().min(0).default(0)
-// });
 const schema = Joi.object().keys({
-  maxRetries: Joi.number().integer().min(0).unit('times'),
+  maxRetries: Joi.number().integer().min(0).default(0).unit('times'),
   shouldRetry: Joi.func().default(() => true),
   retryInterval: Joi.number().min(0).default(0).unit('milliseconds'),
-  concurrency: Joi.number().integer().min(1).default(1),
+  concurrency: [Joi.valid(Infinity), Joi.number().integer().min(1).default(1)],
   interval: Joi.number().min(0).default(0).unit('milliseconds'),
 });
-const value = Joi.attempt({
-  maxRetries: 0,
-  concurrency: 1,
-  interval: 0
-}, schema);
-console.log(value);
-process.exit(1);
-
 
 function delay(ms) {
   return new Promise((resolve, reject) => {
@@ -35,12 +15,13 @@ function delay(ms) {
 }
 
 function run(requests, toPromise, options) {
-  options = options || {};
-  const interval = options.interval || 0;
-  const maxRetries = (options.retry && typeof options.retry.count === 'number') ? options.retry.count : options.retry || 0;
-  const retryInterval = (options.retry && typeof options.retry.interval === 'number') ? options.retry.interval : 0;
-  const limit = (typeof options.concurrency === 'number') ? Math.max(options.concurrency, 1) : 1;
-  const shouldRetry = (options.retry && typeof options.retry.shouldRetry === 'function') ? options.retry.shouldRetry : (e => true);
+  options = Joi.attempt(options || {}, schema);
+  const interval = options.interval;
+  const maxRetries = options.maxRetries;
+  const retryInterval = options.retryInterval;
+  const concurrency = options.concurrency;
+  const shouldRetry = options.shouldRetry;
+
   const reqInfoList = requests.map((req, i) => {
     return {
       index: i,
@@ -59,7 +40,7 @@ function run(requests, toPromise, options) {
     }
     return -1;
   };
-  const loop = makeLoopFunction(reqInfoList, toPromise, interval, timeUntilNextRetry, limit, shouldRetry);
+  const loop = makeLoopFunction(reqInfoList, toPromise, interval, timeUntilNextRetry, concurrency, shouldRetry);
   return new Promise(loop).then(_ => makeResults(reqInfoList));
 }
 
